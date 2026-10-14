@@ -259,5 +259,5 @@ class AgentStudioOrchestrator:
                     ),
                     mention_author=True
                 )
-            except Exception:
-                pass
+            except Exception as reply_err:
+                logger.debug("Could not deliver error notification to chat: %s", reply_err)

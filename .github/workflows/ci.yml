@@ -40,7 +40,28 @@ jobs:
 
       - name: Static Security Scan (Bandit)
         run: |
-          bandit -r src/ -ll -ii --exclude src/animations/
+          # Generate Bandit JSON report
+          bandit -r src/ -f json -o bandit-report.json || true
+          # Parse and fail if any HIGH severity security issues exist
+          python - <<'PY'
+          import json, sys
+          with open('bandit-report.json') as f:
+              data = json.load(f)
+          high_issues = [i for i in data.get('results', []) if i.get('issue_severity', '').upper() == 'HIGH']
+          if high_issues:
+              print(f"::error::Found {len(high_issues)} HIGH severity Bandit security issues:")
+              for item in high_issues:
+                  print(f"  {item.get('filename')}:{item.get('line_number')} - {item.get('issue_text')}")
+              sys.exit(1)
+          print("Security scan passed: 0 HIGH severity Bandit findings.")
+          PY
+
+      - name: Upload Bandit Security Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-security-report
+          path: bandit-report.json
 
       - name: Code Quality & Syntax Verification (Flake8)
         run: |

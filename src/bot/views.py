@@ -5,6 +5,7 @@ dynamic topic rerolling, and 1-tap post delivery.
 """
 
 import random
+import secrets
 import asyncio
 from typing import List, Optional, Callable
 import discord
@@ -217,7 +218,7 @@ class TopicConfiguratorView(View):
             f"*{self.topic.tagline}*\n\n"
             f"💬 **Senior Discussion Questions (Full Text):**\n"
             f"{q_text}\n\n"
-            f"👉 *Select the question from the dropdown below (or tap '🔄 Different Questions'):*"
+            f"👉 *Choose a question from the dropdown below (or tap '🔄 Different Questions'):*"
         )
 
     async def reroll_questions_callback(self, interaction: discord.Interaction):
@@ -264,7 +265,7 @@ class TopicSelectionView(View):
             self.current_topics = topics
         else:
             # Default presentation: pick 3 randomized topics from the full pool
-            self.current_topics = random.sample(TOPIC_POOL, min(3, len(TOPIC_POOL)))
+            self.current_topics = secrets.SystemRandom().sample(TOPIC_POOL, min(3, len(TOPIC_POOL)))
 
         for i, t in enumerate(self.current_topics):
             btn = Button(label=f"{i+1}. {t.title[:25]}", style=discord.ButtonStyle.green, row=i)
@@ -297,7 +298,7 @@ class TopicSelectionView(View):
         if len(remaining) < 3:
             remaining = TOPIC_POOL
 
-        new_topics = random.sample(remaining, min(3, len(remaining)))
+        new_topics = secrets.SystemRandom().sample(remaining, min(3, len(remaining)))
         new_view = TopicSelectionView(new_topics)
         topic_list_text = "\n".join([f"• **{t.title}** — *{t.tagline}*" for t in new_topics])
         await interaction.response.edit_message(

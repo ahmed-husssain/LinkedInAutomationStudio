@@ -40,12 +40,12 @@ def resolve_font(candidates: list, size: int) -> ImageFont.ImageFont:
         if Path(path).exists():
             try:
                 return ImageFont.truetype(str(path), size)
-            except Exception:
+            except (OSError, IOError):
                 continue
     try:
         # Fallback to standard truetype if font name is known to system
         return ImageFont.truetype("arial.ttf", size)
-    except Exception:
+    except (OSError, IOError):
         return ImageFont.load_default()
 
 

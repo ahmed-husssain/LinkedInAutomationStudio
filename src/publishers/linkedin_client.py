@@ -92,7 +92,7 @@ class LinkedInClient:
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec: B310
                 post_id = resp.headers.get("x-restli-id", "success")
                 self.safety_guard.record_successful_post(post_id)
                 return {

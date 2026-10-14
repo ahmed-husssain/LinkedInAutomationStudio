@@ -5,8 +5,11 @@ slide-by-slide carousel breakdowns, and authentic developer copy.
 """
 
 import json
+import logging
 from typing import Dict, Any, List
 from src.agents.gemini_client import GeminiClient
+
+logger = logging.getLogger("ContentStrategist")
 
 STRATEGIST_SYSTEM_PROMPT = """
 You are a Staff Technical Content Strategist & Authentic Developer Ghostwriter.
@@ -165,8 +168,8 @@ class ContentStrategistAgent:
             parsed = json.loads(cleaned.strip())
             if isinstance(parsed, list) and len(parsed) >= 1:
                 return parsed[:count]
-        except Exception:
-            pass
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError) as err:
+            logger.debug("Failed parsing AI trending topics JSON, using curated pool: %s", err)
 
         # High-retention curated fallback
         return [
