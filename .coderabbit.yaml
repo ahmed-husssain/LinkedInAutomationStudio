@@ -1,0 +1,58 @@
+# =====================================================================
+# CodeRabbit AI Code Review Configuration
+# https://docs.coderabbit.ai/
+# =====================================================================
+
+version: "2"
+language: "en-US"
+
+early_access: false
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+      - "master"
+
+  # Path filters
+  path_filters:
+    - "!media/**"
+    - "!assets/carousels/**"
+    - "!*.min.*"
+    - "!*.svg"
+    - "!*.png"
+    - "!*.mp4"
+
+  # Custom engineering review prompt
+  instructions: |
+    You are a Staff Systems Architect reviewing pull requests for LinkedIn Automation Studio.
+    Enforce these strict production rules:
+
+    1. SECURITY & ZERO SECRETS:
+       - Strictly reject any hardcoded tokens, API keys, webhook URLs, or passwords.
+       - Ensure all credentials come from `src.config.settings` or `os.getenv`.
+       - Verify that `.env` or credential files are never committed.
+
+    2. DESIGN SYSTEM & COLLISION SAFETY:
+       - Video Layout (Manim): All subtitle, step, and takeaway banners MUST maintain Y >= -1.8 to prevent video scrubber collision.
+       - Carousel / PDF Layout: All titles, subtitles, and bullet points MUST be wrapped at word boundaries (`wrap_text_cleanly`). No raw string index clipping (`[:N]`).
+       - Font glyph safety: Never draw raw Unicode emojis or unsupported glyphs directly with PIL without fallback protection.
+
+    3. PONYTAIL SENIOR MINIMALISM (YAGNI):
+       - Prefer Python standard library over new third-party dependencies.
+       - Flag any speculative abstractions (unused interfaces, factories for single classes, unnecessary wrapper layers).
+       - Reject heavy orchestrator frameworks (CrewAI, LangChain, APScheduler) when native async loops or clean 10-line loops solve the problem.
+
+    4. ASYNC & DISCORD BOT RELIABILITY:
+       - All background loops must have proper error handling and exponential backoff to avoid gateway disconnect loops.
+       - Deduplication caches must use bounded memory structures (e.g. `BoundedMessageTracker` with max size).
+
+chat:
+  auto_reply: true

@@ -1,0 +1,84 @@
+name: Studio CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  security-and-lint:
+    name: Security Scan & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Lint & Security Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 bandit
+
+      - name: Secret Leak Prevention Guard
+        run: |
+          echo "Checking for accidental secret files..."
+          if [ -f ".env" ]; then
+            echo "::error::CRITICAL: .env file found in repository! Remove it immediately!"
+            exit 1
+          fi
+          echo "Secret guard passed: No .env detected."
+
+      - name: Static Security Scan (Bandit)
+        run: |
+          bandit -r src/ -ll -ii --exclude src/animations/
+
+      - name: Code Quality & Syntax Verification (Flake8)
+        run: |
+          # Stop build if there are Python syntax errors or undefined names
+          flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treat all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 src/ tests/ --count --exit-zero --max-complexity=15 --max-line-length=135 --statistics
+
+  test-suite:
+    name: Automated Adversarial Test Suite
+    runs-on: ubuntu-latest
+    needs: security-and-lint
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install System Dependencies for Manim & Cairo
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            ffmpeg \
+            libcairo2-dev \
+            libpango1.0-dev
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Test Suite (39 Adversarial & Orchestrator Tests)
+        env:
+          GEMINI_API_KEY: "dummy_test_key_for_ci"
+          DISCORD_BOT_TOKEN: "dummy_bot_token_for_ci"
+        run: |
+          python -m pytest -v --durations=10

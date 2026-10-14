@@ -1,0 +1,29 @@
+# =====================================================================
+# LinkedIn Automation Studio - Core Production Dependencies
+# =====================================================================
+
+# Discord Bot Client & Async Gateway
+discord.py>=2.3.2
+
+# High-Performance Image & 1080x1350 PDF Carousel Generation
+pillow>=10.2.0
+
+# Strict Schema Contracts & Validation
+pydantic>=2.7.0
+
+# Official Google Gemini SDK
+google-genai>=0.1.0
+
+# Environment Configuration Loader
+python-dotenv>=1.0.1
+
+# 2D Animation Engine for Square 1080x1080 60fps Videos
+manim>=0.18.0
+
+# =====================================================================
+# Development, Linting & CI Testing
+# =====================================================================
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+flake8>=7.0.0
+bandit>=1.7.8

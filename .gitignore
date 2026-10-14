@@ -1,0 +1,77 @@
+# =====================================================================
+# Security & Credentials (CRITICAL - NEVER COMMIT REAL SECRETS)
+# =====================================================================
+.env
+.env.*
+!.env.example
+
+# =====================================================================
+# Python & Bytecode Cache
+# =====================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# =====================================================================
+# Testing & Tooling Cache
+# =====================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.ruff_cache/
+.mypy_cache/
+
+# =====================================================================
+# Virtual Environments
+# =====================================================================
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# =====================================================================
+# Generated Artifacts & Engine Output
+# =====================================================================
+media/
+assets/carousels/
+data/*.json
+!data/.gitkeep
+*.log
+logs/
+
+# =====================================================================
+# IDEs & OS Files
+# =====================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+ehthumbs.db
