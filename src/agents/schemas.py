@@ -11,8 +11,15 @@ class SlideSchema(BaseModel):
     badge: str = Field(..., max_length=40, description="Short category badge (e.g., 'The Bottleneck')")
     title: str = Field(..., max_length=60, description="Slide main title")
     subtitle: str = Field(..., max_length=90, description="Slide supporting subtitle")
-    bullets: List[str] = Field(..., min_length=2, max_length=4, description="2-4 punchy, high-retention bullet points")
+    bullets: List[str] = Field(..., min_length=1, max_length=5, description="1-5 punchy, high-retention bullet points")
     accent: str = Field(default="#58a6ff", description="Hex accent color code")
+    layout_type: str = Field(default="standard", description="standard | comparison | code | metric")
+    code_snippet: Optional[str] = Field(default=None, description="Optional configuration or code snippet")
+    left_title: Optional[str] = Field(default=None, description="Optional title for comparison approach A")
+    right_title: Optional[str] = Field(default=None, description="Optional title for comparison approach B")
+    metric_label: Optional[str] = Field(default=None, description="Optional KPI title")
+    metric_value: Optional[str] = Field(default=None, description="Optional big stat, e.g. 420ms -> 18ms")
+    metric_delta: Optional[str] = Field(default=None, description="Optional improvement note")
 
     @field_validator("accent")
     @classmethod
@@ -29,6 +36,7 @@ class PostPackageSchema(BaseModel):
     body: str = Field(..., min_length=50, description="Step-by-step breakdown or mental model")
     senior_question: str = Field(..., min_length=15, max_length=250, description="Open-ended architectural debate question")
     slides: List[SlideSchema] = Field(..., min_length=3, max_length=8, description="Ordered slide deck")
+    difficulty: str = Field(default="production", description="foundation | production | staff")
 
 
 class CriticReviewSchema(BaseModel):

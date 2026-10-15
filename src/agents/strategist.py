@@ -26,6 +26,7 @@ You MUST return valid JSON matching this schema:
 {
   "topic_title": "string (max 38 chars)",
   "subject": "string",
+  "difficulty": "foundation | production | staff",
   "hook": "string",
   "body": "string",
   "senior_question": "string",
@@ -34,8 +35,15 @@ You MUST return valid JSON matching this schema:
       "badge": "string (e.g. The Problem, Architecture, Flow, Tradeoffs)",
       "title": "string (max 32 chars)",
       "subtitle": "string (max 50 chars)",
-      "bullets": ["string", "string", "string"],
-      "accent": "string (hex color: #58a6ff, #f85149, #3fb950, #bc8cff, #e3b341)"
+      "bullets": ["string", "string"],
+      "accent": "string (hex color: #58a6ff, #f85149, #3fb950, #bc8cff, #e3b341, #00f0ff, #f59e0b)",
+      "layout_type": "standard | comparison | code | metric (pick the most visual layout for this concept)",
+      "code_snippet": "string (optional, config or code snippet if layout_type is code)",
+      "left_title": "string (optional, e.g. Naive Approach if layout_type is comparison)",
+      "right_title": "string (optional, e.g. Production Fix if layout_type is comparison)",
+      "metric_label": "string (optional, e.g. p99 Tail Latency if layout_type is metric)",
+      "metric_value": "string (optional, e.g. 420ms -> 18ms if layout_type is metric)",
+      "metric_delta": "string (optional, e.g. 95% reduction under load)"
     }
   ]
 }

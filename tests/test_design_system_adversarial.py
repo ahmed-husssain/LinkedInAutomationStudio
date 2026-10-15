@@ -106,3 +106,101 @@ def test_pdf_carousel_slide_rendering_integrity(tmp_path):
         is_final=True
     )
     assert final.size == (1080, 1350)
+
+
+def test_pdf_carousel_specialized_layouts():
+    """Validates comparison, code terminal, and metric KPI slide rendering and fallbacks."""
+    # 1. Comparison Slide (Happy Path)
+    comp_slide = render_carousel_slide(
+        slide_index=3,
+        total_slides=6,
+        badge_text="Architecture Comparison",
+        title="Eager vs Cooperative Rebalance",
+        subtitle="Evaluating partition migration strategies",
+        bullet_points=[
+            "Eager revokes all partitions causing a global stop-the-world freeze",
+            "Cooperative Sticky migrates partitions incrementally with zero downtime"
+        ],
+        layout_type="comparison",
+        left_title="Eager Rebalance (Naive)",
+        right_title="Cooperative Sticky (Production)"
+    )
+    assert comp_slide.size == (1080, 1350)
+
+    # 2. Comparison Slide Fallback (Adversarial: only 1 bullet point)
+    comp_fallback = render_carousel_slide(
+        slide_index=3,
+        total_slides=6,
+        badge_text="Architecture Comparison",
+        title="Single Point Fallback",
+        subtitle="Should gracefully fall back to standard",
+        bullet_points=["Single bullet point provided by AI"],
+        layout_type="comparison"
+    )
+    assert comp_fallback.size == (1080, 1350)
+
+    # 3. Code Window Slide
+    code_slide = render_carousel_slide(
+        slide_index=4,
+        total_slides=6,
+        badge_text="Config Hardening",
+        title="Cooperative Sticky Assignor",
+        subtitle="Configuring librdkafka and Java clients",
+        bullet_points=["Eliminates 99% of consumer group latency spikes"],
+        layout_type="code",
+        code_snippet="partition.assignment.strategy: CooperativeSticky\nmax.poll.interval.ms: 300000"
+    )
+    assert code_slide.size == (1080, 1350)
+
+    # 4. Metric KPI Slide
+    metric_slide = render_carousel_slide(
+        slide_index=5,
+        total_slides=6,
+        badge_text="Production Impact",
+        title="Tail Latency Results",
+        subtitle="Measured across 50 consumer pods",
+        bullet_points=["Zero rebalance freezes observed over 30 days"],
+        layout_type="metric",
+        metric_label="P99 TAIL LATENCY",
+        metric_value="420ms -> 18ms",
+        metric_delta="95.7% Improvement under load"
+    )
+    assert metric_slide.size == (1080, 1350)
+
+
+def test_dynamic_theme_resolver():
+    """Validates that topic keywords resolve to the appropriate calibrated theme."""
+    from src.agents.carousel_builder import resolve_topic_theme
+
+    assert resolve_topic_theme("Kafka Partition Rebalance")["accent"] == "#00f0ff"
+    assert resolve_topic_theme("OAuth2 JWT PKCE Security")["accent"] == "#f59e0b"
+    assert resolve_topic_theme("PostgreSQL B-Tree Index Optimization")["accent"] == "#34d399"
+    assert resolve_topic_theme("Raft Consensus Distributed State")["accent"] == "#38bdf8"
+    assert resolve_topic_theme("General Programming Concepts")["accent"] == "#58a6ff"
+
+
+def test_bounded_carousel_file_pruning(tmp_path):
+    """Validates that LRU file pruning enforces the max_versions bound."""
+    from src.agents.carousel_builder import prune_old_carousel_versions, CAROUSEL_DIR
+    import time
+
+    topic_key = "test_pruning_topic"
+    created_files = []
+    
+    # Create 8 dummy PDF files with distinct timestamps
+    for i in range(8):
+        f = CAROUSEL_DIR / f"{topic_key}_version_{i}.pdf"
+        f.write_text(f"dummy pdf content {i}")
+        created_files.append(f)
+        time.sleep(0.01)
+
+    try:
+        # Prune to maximum 5
+        prune_old_carousel_versions(topic_key, max_versions=5)
+        remaining = list(CAROUSEL_DIR.glob(f"{topic_key}_*.pdf"))
+        assert len(remaining) == 5, f"Expected 5 files, but found {len(remaining)}"
+    finally:
+        # Cleanup test files
+        for f in CAROUSEL_DIR.glob(f"{topic_key}_*.pdf"):
+            f.unlink(missing_ok=True)
+

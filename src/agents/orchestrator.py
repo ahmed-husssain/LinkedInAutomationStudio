@@ -179,7 +179,8 @@ class AgentStudioOrchestrator:
                     topic_id=topic_slug,
                     topic_title=draft.get("topic_title", clean_text),
                     slides_data=draft.get("slides", []),
-                    senior_question=draft.get("senior_question", "")
+                    senior_question=draft.get("senior_question", ""),
+                    difficulty=draft.get("difficulty", "production")
                 )
 
                 # Step 4: Format authentic post copy
@@ -207,7 +208,7 @@ class AgentStudioOrchestrator:
                 )
 
                 if pdf_path.exists():
-                    pdf_file = discord.File(str(pdf_path), filename=f"{topic_slug}_Carousel.pdf")
+                    pdf_file = discord.File(str(pdf_path), filename=pdf_path.name)
                     await status_msg.edit(content=final_text)
                     await channel.send(file=pdf_file)
                 else:

@@ -75,11 +75,15 @@ Every AI agent working on this codebase must consult this memory bank to ensure 
 ## 3. Current Active Architecture State
 
 ```
-Current Version: v1.0.0
+Current Version: v1.1.0
 Git Branch: main
 CI/CD Pipeline: GitHub Actions (.github/workflows/ci.yml)
 Security Status: Bandit 0 High / 0 Medium, Flake8 Clean
-Test Suite: 39 / 39 passing (pytest)
+Test Suite: 42 / 42 passing (pytest)
+```
+
+### Recent Architecture Milestones (Oct 2026)
+* **Milestone CR-001 (Multi-Layout Carousel Engine):** Upgraded `carousel_builder.py` with 4 distinct slide layouts (Comparison, Code Window with vector macOS dots, Metric KPI, Standard), topic-aware dynamic palettes (Cyberpunk, Security, Database, Distributed), and bounded LRU file versioning (max 5 files per topic).
 ```
 
 ### Module Mapping
