@@ -399,13 +399,15 @@ def render_carousel_slide(
     metric_value: str = "",
     metric_delta: str = "",
     difficulty: str = "production",
-    diagram_nodes: Optional[List[str]] = None
+    diagram_nodes: Optional[List[str]] = None,
+    theme: Optional[Dict[str, str]] = None
 ) -> Image.Image:
     """
     Renders a single high-contrast 1080x1350 dark-mode slide with zero overlapping text.
-    100% backwards-compatible with existing callers.
+    Maintains 100% theme consistency across all slides in the deck.
     """
-    theme = resolve_topic_theme(badge_text + " " + title)
+    if theme is None:
+        theme = resolve_topic_theme(title)
     active_accent = accent_color if accent_color != ACCENT_CYAN else theme["accent"]
 
     img = Image.new("RGB", (PDF_WIDTH, PDF_HEIGHT), color=theme["bg_dark"])
@@ -594,6 +596,10 @@ def build_pdf_carousel(
     total = len(slides_data) + 2
     rendered_images: List[Image.Image] = []
 
+    # Resolve theme once for the entire carousel deck to guarantee 100% visual consistency
+    deck_theme = resolve_topic_theme(topic_title, override=theme_override)
+    deck_accent = deck_theme["accent"]
+
     # 1. Cover Slide
     cover_bullets = [s.get("title", "") for s in slides_data[:3]]
     cover_img = render_carousel_slide(
@@ -603,15 +609,17 @@ def build_pdf_carousel(
         title=topic_title,
         subtitle="A 60-Second Visual Mental Model",
         bullet_points=cover_bullets,
-        accent_color=ACCENT_CYAN,
+        accent_color=deck_accent,
         is_cover=True,
-        difficulty=difficulty
+        difficulty=difficulty,
+        theme=deck_theme
     )
     rendered_images.append(cover_img)
 
-    # 2. Content Slides
+    # 2. Content Slides (Sharing exact same deck_theme)
     for idx, s in enumerate(slides_data):
         slide_num = idx + 2
+        slide_accent = s.get("accent") if s.get("accent") and s.get("accent") != ACCENT_CYAN else deck_accent
         slide_img = render_carousel_slide(
             slide_index=slide_num,
             total_slides=total,
@@ -619,7 +627,7 @@ def build_pdf_carousel(
             title=s.get("title", f"Concept {idx+1}"),
             subtitle=s.get("subtitle", ""),
             bullet_points=s.get("bullets", []),
-            accent_color=s.get("accent", ACCENT_CYAN),
+            accent_color=slide_accent,
             layout_type=s.get("layout_type", "standard"),
             code_snippet=s.get("code_snippet", ""),
             left_title=s.get("left_title", ""),
@@ -627,11 +635,12 @@ def build_pdf_carousel(
             metric_label=s.get("metric_label", ""),
             metric_value=s.get("metric_value", ""),
             metric_delta=s.get("metric_delta", ""),
-            difficulty=difficulty
+            difficulty=difficulty,
+            theme=deck_theme
         )
         rendered_images.append(slide_img)
 
-    # 3. Final Discussion Question Slide
+    # 3. Final Discussion Question Slide (Sharing exact same deck_theme)
     final_q = senior_question or "In production, what is your team's standard approach for handling this?"
     final_img = render_carousel_slide(
         slide_index=total,
@@ -640,9 +649,10 @@ def build_pdf_carousel(
         title="Discussion Question",
         subtitle="For Senior & Staff Engineers",
         bullet_points=[final_q],
-        accent_color="#34d399",
+        accent_color=deck_theme.get("accent_secondary", "#34d399"),
         is_final=True,
-        difficulty=difficulty
+        difficulty=difficulty,
+        theme=deck_theme
     )
     rendered_images.append(final_img)
 

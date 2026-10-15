@@ -94,3 +94,4 @@ Before any feature is approved, it must be evaluated across these 5 simple quest
 | Change ID | Date | Feature Scope | Identified Risks | Approved Mitigations | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **CR-001** | Oct 15, 2026 | Multi-Layout Carousel & Dynamic Theming | Disk bloat, AI malformed JSON, Discord caching, test regressions | 5-file bounded LRU pruning, defensive fallbacks, timestamped IDs, signature compatibility | **Approved & Implemented** |
+| **CR-002** | Oct 15, 2026 | Theme Unification & Question-Gated Views | Premature asset generation, slide theme mismatches | UI format button locking until question selection, deck-level single theme resolution | **Approved & Implemented** |

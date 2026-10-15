@@ -123,7 +123,7 @@ async def deliver_post_package(
 
 class TopicConfiguratorView(View):
     """Mobile-optimized configuration view for angles, questions, and format."""
-    def __init__(self, topic: Topic, q_offset: int = 0):
+    def __init__(self, topic: Topic, q_offset: int = 0, selected_q: Optional[str] = None):
         super().__init__(timeout=600)
         self.topic = topic
         self.q_offset = q_offset
@@ -131,7 +131,8 @@ class TopicConfiguratorView(View):
         self.active_questions = [all_q[(q_offset + i) % len(all_q)] for i in range(min(3, len(all_q)))]
 
         self.selected_angle = topic.angles[0].text
-        self.selected_q = self.active_questions[0]
+        self.selected_q = selected_q
+        self.has_chosen_question = selected_q is not None
 
         # 1. Angle dropdown
         angle_options = []
@@ -164,41 +165,46 @@ class TopicConfiguratorView(View):
                 )
             )
         self.q_select = Select(
-            placeholder="💬 2. Choose Discussion Question...",
+            placeholder="💬 2. Choose Discussion Question to Unlock Formats...",
             options=q_options,
             row=1
         )
         self.q_select.callback = self.on_q_change
         self.add_item(self.q_select)
 
-        # 3. Delivery format buttons
+        # 3. Delivery format buttons (Disabled until question is explicitly chosen!)
         if topic.has_video:
-            video_btn = Button(
+            self.video_btn = Button(
                 label="🎬 Short Video (10-15s) + Thumbnail",
                 style=discord.ButtonStyle.primary,
                 emoji="🎥",
-                row=2
+                row=2,
+                disabled=not self.has_chosen_question
             )
-            video_btn.callback = self.make_format_callback("video")
-            self.add_item(video_btn)
+            self.video_btn.callback = self.make_format_callback("video")
+            self.add_item(self.video_btn)
+        else:
+            self.video_btn = None
 
-        pdf_btn = Button(
+        self.pdf_btn = Button(
             label="📑 6-Slide PDF Carousel",
             style=discord.ButtonStyle.success,
             emoji="📄",
-            row=2
+            row=2,
+            disabled=not self.has_chosen_question
         )
-        pdf_btn.callback = self.make_format_callback("carousel")
-        self.add_item(pdf_btn)
+        self.pdf_btn.callback = self.make_format_callback("carousel")
+        self.add_item(self.pdf_btn)
 
-        img_btn = Button(
+        self.img_btn = Button(
             label="🖼️ Technical Architecture Diagram",
             style=discord.ButtonStyle.secondary,
             emoji="📊",
-            row=2
+            row=2,
+            disabled=not self.has_chosen_question
         )
-        img_btn.callback = self.make_format_callback("image")
-        self.add_item(img_btn)
+        self.img_btn.callback = self.make_format_callback("image")
+        self.add_item(self.img_btn)
 
         # 4. Reroll questions button
         reroll_q_btn = Button(
@@ -213,13 +219,27 @@ class TopicConfiguratorView(View):
     def get_message_content(self) -> str:
         number_emojis = ["1️⃣", "2️⃣", "3️⃣"]
         q_text = "\n".join([f"{number_emojis[i]} *\"{q}\"*" for i, q in enumerate(self.active_questions)])
-        return (
-            f"📌 **TOPIC:** **{self.topic.title}**\n"
-            f"*{self.topic.tagline}*\n\n"
-            f"💬 **Senior Discussion Questions (Full Text):**\n"
-            f"{q_text}\n\n"
-            f"👉 *Choose a question from the dropdown below (or tap '🔄 Different Questions'):*"
-        )
+
+        if self.has_chosen_question and self.selected_q:
+            return (
+                f"📌 **TOPIC:** **{self.topic.title}**\n"
+                f"*{self.topic.tagline}*\n\n"
+                f"✅ **CHOSEN DISCUSSION QUESTION:**\n"
+                f"💬 *\"{self.selected_q}\"*\n\n"
+                f"🎯 **Step 2:** Tap a format below to generate your ready-to-post package:\n"
+                f"• 🎬 **Short Video** (10-15s animated MP4 + cover)\n"
+                f"• 📑 **6-Slide PDF Carousel** (1080x1350 vertical document post)\n"
+                f"• 🖼️ **Technical Architecture Diagram** (1080x1080 card)"
+            )
+        else:
+            return (
+                f"📌 **TOPIC:** **{self.topic.title}**\n"
+                f"*{self.topic.tagline}*\n\n"
+                f"💬 **Senior Discussion Questions (Pick One to Proceed):**\n"
+                f"{q_text}\n\n"
+                f"👉 **Step 1:** Pick your preferred question using the dropdown menu below.\n"
+                f"*(The generation buttons below will unlock once you pick your question)*"
+            )
 
     async def reroll_questions_callback(self, interaction: discord.Interaction):
         new_offset = (self.q_offset + 3) % len(self.topic.questions)
@@ -239,11 +259,29 @@ class TopicConfiguratorView(View):
         CHANNEL_ACTIVE_TOPIC[interaction.channel_id] = self.topic
         idx = int(self.q_select.values[0].split("_")[1])
         self.selected_q = self.active_questions[idx]
-        await interaction.response.defer()
+        self.has_chosen_question = True
+
+        # Unlock format buttons
+        if self.video_btn:
+            self.video_btn.disabled = False
+        self.pdf_btn.disabled = False
+        self.img_btn.disabled = False
+
+        await interaction.response.edit_message(
+            content=self.get_message_content(),
+            view=self
+        )
 
     def make_format_callback(self, format_type: str):
         async def callback(interaction: discord.Interaction):
             CHANNEL_ACTIVE_TOPIC[interaction.channel_id] = self.topic
+            if not self.has_chosen_question or not self.selected_q:
+                await interaction.response.send_message(
+                    "⚠️ **Please choose a discussion question from the dropdown first before generating!**",
+                    ephemeral=True
+                )
+                return
+
             await interaction.response.defer()
             asyncio.create_task(
                 deliver_post_package(

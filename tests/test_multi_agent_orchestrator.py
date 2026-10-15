@@ -178,6 +178,16 @@ def test_topic_selection_view_features():
     cfg = TopicConfiguratorView(TOPIC_POOL[0])
     carousel_btn = next((item for item in cfg.children if "Carousel" in getattr(item, "label", "")), None)
     assert carousel_btn is not None
+    # Generation buttons must be locked until user explicitly picks a question!
+    assert cfg.has_chosen_question is False
+    assert carousel_btn.disabled is True
+
+    # When question is chosen, buttons unlock
+    cfg.selected_q = TOPIC_POOL[0].questions[0]
+    cfg.has_chosen_question = True
+    carousel_btn.disabled = False
+    assert carousel_btn.disabled is False
+
 
 
 

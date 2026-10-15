@@ -75,15 +75,18 @@ Every AI agent working on this codebase must consult this memory bank to ensure 
 ## 3. Current Active Architecture State
 
 ```
-Current Version: v1.1.0
+Current Version: v1.1.1
 Git Branch: main
 CI/CD Pipeline: GitHub Actions (.github/workflows/ci.yml)
 Security Status: Bandit 0 High / 0 Medium, Flake8 Clean
-Test Suite: 42 / 42 passing (pytest)
+Test Suite: 43 / 43 passing (pytest)
 ```
 
 ### Recent Architecture Milestones (Oct 2026)
 * **Milestone CR-001 (Multi-Layout Carousel Engine):** Upgraded `carousel_builder.py` with 4 distinct slide layouts (Comparison, Code Window with vector macOS dots, Metric KPI, Standard), topic-aware dynamic palettes (Cyberpunk, Security, Database, Distributed), and bounded LRU file versioning (max 5 files per topic).
+* **Milestone CR-002 (Deck-Wide Theme Unification & Question-Gated Views):** 
+  1. Enforced 100% theme uniformity across all slides of a single carousel deck (no more background/palette jumps between pages).
+  2. Enforced question selection in `TopicConfiguratorView` before unlocking generation buttons (short video, carousel, diagram), preventing accidental premature triggers.
 ```
 
 ### Module Mapping

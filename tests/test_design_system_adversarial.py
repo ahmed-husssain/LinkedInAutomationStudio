@@ -204,3 +204,27 @@ def test_bounded_carousel_file_pruning(tmp_path):
         for f in CAROUSEL_DIR.glob(f"{topic_key}_*.pdf"):
             f.unlink(missing_ok=True)
 
+
+def test_carousel_deck_theme_consistency():
+    """Validates that all slides in a carousel deck share identical background and theme tokens."""
+    from src.agents.carousel_builder import resolve_topic_theme, render_carousel_slide
+
+    # 1. Resolve deck theme for Kafka (Cyberpunk Neon)
+    deck_theme = resolve_topic_theme("Kafka Partition Rebalance")
+
+    # Render Cover, Comparison, Code, and Final slides with the unified deck_theme
+    cover = render_carousel_slide(1, 4, "Topic", "Kafka Partition Rebalance", "Sub", ["p1"], is_cover=True, theme=deck_theme)
+    content = render_carousel_slide(2, 4, "Dilemma", "Eager vs Cooperative", "Sub", ["p1", "p2"], layout_type="comparison", theme=deck_theme)
+    code = render_carousel_slide(3, 4, "Config", "Sticky Assignor", "Sub", ["p1"], layout_type="code", theme=deck_theme)
+    final = render_carousel_slide(4, 4, "Debate", "Discussion Question", "Sub", ["p1"], is_final=True, theme=deck_theme)
+
+    # Verify background pixel at (10, 10) is 100% identical on all 4 slides
+    bg_cover = cover.getpixel((10, 10))
+    bg_content = content.getpixel((10, 10))
+    bg_code = code.getpixel((10, 10))
+    bg_final = final.getpixel((10, 10))
+
+    assert bg_cover == bg_content == bg_code == bg_final, (
+        f"Inconsistent deck backgrounds! Cover: {bg_cover}, Content: {bg_content}, Code: {bg_code}, Final: {bg_final}"
+    )
+
