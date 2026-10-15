@@ -67,3 +67,14 @@ Violations will be automatically blocked by GitHub Actions CI, CodeRabbit AI rev
 * **Enforcement:**
   - The multi-agent orchestrator must catch API exceptions and fall back to high-quality curated offline topics in [`src/config/topics.py`](file:///D:/LinkedInAutomationStudio/src/config/topics.py).
   - The LinkedIn client must fall back to Safe Simulation Mode if credentials are absent.
+
+### Rule 10: Mandatory Pre-Implementation Consequence & Risk Disclosure (The Transparency Invariant)
+* **The Law:** Never implement any new feature, architectural modification, or refactoring without proactively presenting the downstream consequences, risks, and mitigations in plain, beginner-friendly terms *first*.
+* **Enforcement:**
+  - Before executing non-trivial code changes, the AI agent or contributor MUST present an upfront impact breakdown covering:
+    1. **What changes:** Exact files and behaviors affected.
+    2. **Downstream consequences & risks:** Potential negative side-effects (e.g. disk space accumulation, AI parsing edge cases, caching issues, performance impact) explained simply.
+    3. **Concrete mitigations:** The exact safeguards implemented to neutralize those risks.
+    4. **Safety net:** How the system falls back if anything unexpected occurs.
+  - All major changes and their risk assessments must be logged in [`docs/consequences_matrix.md`](file:///D:/LinkedInAutomationStudio/docs/consequences_matrix.md).
+

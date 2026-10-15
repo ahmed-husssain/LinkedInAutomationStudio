@@ -23,6 +23,7 @@ This repository features a comprehensive **Agent Context Harness** and documenta
 | **[📜 Engineering Rules](docs/rules.md)** | Non-negotiable laws: Zero Secrets, Atomic Persistence, Bounded LRU, and Ponytail YAGNI. |
 | **[🛠️ Skills Playbook](docs/skills.md)** | Operational guide for `/ponytail`, `/ponytail-review`, `/ponytail-audit`, and Thermonuclear review. |
 | **[🧠 Living Memory Bank](docs/memory.md)** | Historical incidents (Manim scrubber collision, poller memory leak, Bandit fixes) and permanent resolutions. |
+| **[⚠️ Consequences & Risk Register](docs/consequences_matrix.md)** | Mandatory pre-implementation impact analysis, failure mode breakdown, and mitigations. |
 | **[🤝 Contributing Guide](CONTRIBUTING.md)** | Branching workflow, pull request standards, and CodeRabbit review conventions. |
 
 ---
