@@ -18,6 +18,7 @@ from src.bot.views import (
     ThumbnailThemeView,
     QuickActionView,
     CHANNEL_ACTIVE_TOPIC,
+    RECENT_TOPIC_IDS,
 )
 
 
@@ -156,7 +157,11 @@ async def dispatch_user_message(
         return
 
     channel_id = channel.id
-    current_topic = CHANNEL_ACTIVE_TOPIC.get(channel_id, TOPIC_POOL[0])
+    current_topic = CHANNEL_ACTIVE_TOPIC.get(channel_id)
+    if not current_topic:
+        eligible = [t for t in TOPIC_POOL if t.id not in RECENT_TOPIC_IDS]
+        current_topic = eligible[0] if eligible else TOPIC_POOL[0]
+
     parsed = match_user_intent(clean_text, current_topic)
     intent = parsed["intent"]
 
@@ -184,13 +189,8 @@ async def dispatch_user_message(
 
     elif intent == "BROWSE_TOPICS":
         view = TopicSelectionView()
-        topics_text = "\n".join([f"• **{t.title}** — *{t.tagline}*" for t in view.current_topics])
         await reply_or_send(
-            content=(
-                f"👋 **Here are today's recommended topics:**\n\n"
-                f"{topics_text}\n\n"
-                f"👉 *Tap a button below to configure, or type any topic name:* "
-            ),
+            content=view.get_message_content(),
             view=view
         )
 

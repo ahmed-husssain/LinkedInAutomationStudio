@@ -16,8 +16,13 @@ from src.engines.text_splitter import split_text_for_option
 from src.engines.copy_engine import format_linkedin_post
 from src.engines.diagram_engine import generate_technical_diagram, THEMES
 
+from collections import deque
+
 # In-memory channel state tracker (maps channel_id to last selected Topic)
 CHANNEL_ACTIVE_TOPIC = {}
+
+# In-memory recent topic history to prevent repeated suggestions (initialized with 'oauth' to skip previous work)
+RECENT_TOPIC_IDS: deque = deque(["oauth"], maxlen=6)
 
 
 async def deliver_post_package(
@@ -226,18 +231,23 @@ class TopicConfiguratorView(View):
                 f"*{self.topic.tagline}*\n\n"
                 f"✅ **CHOSEN DISCUSSION QUESTION:**\n"
                 f"💬 *\"{self.selected_q}\"*\n\n"
-                f"🎯 **Step 2:** Tap a format below to generate your ready-to-post package:\n"
-                f"• 🎬 **Short Video** (10-15s animated MP4 + cover)\n"
-                f"• 📑 **6-Slide PDF Carousel** (1080x1350 vertical document post)\n"
-                f"• 🖼️ **Technical Architecture Diagram** (1080x1080 card)"
+                f"🚀 **STEP 3 OF 3: Choose Your Generation Format**\n"
+                f"────────────────────────────────────────\n"
+                f"• 🎬 **Short Video:** 10-15s animated MP4 (60fps) + cover thumbnail\n"
+                f"• 📑 **6-Slide PDF Carousel:** 1080x1350 multi-page mobile document deck\n"
+                f"• 🖼️ **Architecture Diagram:** 1080x1080 high-contrast technical card\n"
+                f"────────────────────────────────────────\n"
+                f"👉 Tap an active format button below to generate:"
             )
         else:
             return (
                 f"📌 **TOPIC:** **{self.topic.title}**\n"
                 f"*{self.topic.tagline}*\n\n"
-                f"💬 **Senior Discussion Questions (Pick One to Proceed):**\n"
-                f"{q_text}\n\n"
-                f"👉 **Step 1:** Pick your preferred question using the dropdown menu below.\n"
+                f"💬 **STEP 2 OF 3: Choose a Senior Discussion Question**\n"
+                f"────────────────────────────────────────\n"
+                f"{q_text}\n"
+                f"────────────────────────────────────────\n"
+                f"👉 **Action:** Pick which question you want to debate using the dropdown menu below.\n"
                 f"*(The generation buttons below will unlock once you pick your question)*"
             )
 
@@ -296,14 +306,20 @@ class TopicConfiguratorView(View):
 
 
 class TopicSelectionView(View):
-    """Main topic browser with guaranteed fresh dynamic rerolling."""
+    """Main topic browser with guaranteed fresh dynamic rerolling and anti-repeat history."""
     def __init__(self, topics: Optional[List[Topic]] = None):
         super().__init__(timeout=600)
         if topics:
             self.current_topics = topics
         else:
-            # Default presentation: pick 3 randomized topics from the full pool
-            self.current_topics = secrets.SystemRandom().sample(TOPIC_POOL, min(3, len(TOPIC_POOL)))
+            # Filter out recently worked-on topics (e.g. OAuth) so they are NEVER repeatedly suggested
+            eligible = [t for t in TOPIC_POOL if t.id not in RECENT_TOPIC_IDS]
+            if len(eligible) < 3:
+                # If pool exhausted, only exclude the most recent one
+                eligible = [t for t in TOPIC_POOL if t.id != (RECENT_TOPIC_IDS[-1] if RECENT_TOPIC_IDS else "")]
+                if len(eligible) < 3:
+                    eligible = TOPIC_POOL
+            self.current_topics = secrets.SystemRandom().sample(eligible, min(3, len(eligible)))
 
         for i, t in enumerate(self.current_topics):
             btn = Button(label=f"{i+1}. {t.title[:25]}", style=discord.ButtonStyle.green, row=i)
@@ -318,8 +334,21 @@ class TopicSelectionView(View):
         ai_btn.callback = self.ai_discover_callback
         self.add_item(ai_btn)
 
+    def get_message_content(self) -> str:
+        topics_text = "\n".join([f"**{i+1}️⃣ {t.title}**\n   *{t.tagline}*" for i, t in enumerate(self.current_topics)])
+        return (
+            f"🚀 **LinkedIn Automation Studio**\n\n"
+            f"🎯 **STEP 1 OF 3: Choose a System Design Topic**\n"
+            f"────────────────────────────────────────\n"
+            f"{topics_text}\n"
+            f"────────────────────────────────────────\n"
+            f"👉 **Action:** Tap a topic button below, or type any custom topic name in chat:\n"
+            f"*(Tap '🔄 Reroll Topics' for fresh ideas, or '🔥 AI Viral Topics' for real-time trending angles)*"
+        )
+
     def make_callback(self, topic: Topic):
         async def callback(interaction: discord.Interaction):
+            RECENT_TOPIC_IDS.append(topic.id)
             CHANNEL_ACTIVE_TOPIC[interaction.channel_id] = topic
             config_view = TopicConfiguratorView(topic)
             await interaction.response.send_message(
@@ -330,21 +359,19 @@ class TopicSelectionView(View):
         return callback
 
     async def reroll_callback(self, interaction: discord.Interaction):
-        # Pick 3 topics STRICTLY from those NOT currently displayed
+        # Pick 3 topics STRICTLY from those NOT currently displayed and NOT recently used
         current_ids = {t.id for t in self.current_topics}
-        remaining = [t for t in TOPIC_POOL if t.id not in current_ids]
+        excluded_ids = current_ids.union(set(RECENT_TOPIC_IDS))
+        remaining = [t for t in TOPIC_POOL if t.id not in excluded_ids]
         if len(remaining) < 3:
-            remaining = TOPIC_POOL
+            remaining = [t for t in TOPIC_POOL if t.id not in current_ids]
+            if len(remaining) < 3:
+                remaining = TOPIC_POOL
 
         new_topics = secrets.SystemRandom().sample(remaining, min(3, len(remaining)))
         new_view = TopicSelectionView(new_topics)
-        topic_list_text = "\n".join([f"• **{t.title}** — *{t.tagline}*" for t in new_topics])
         await interaction.response.edit_message(
-            content=(
-                f"🔄 **Here are 3 fresh topics:**\n\n"
-                f"{topic_list_text}\n\n"
-                f"👉 *Tap one below to configure options:* "
-            ),
+            content=new_view.get_message_content(),
             view=new_view
         )
 

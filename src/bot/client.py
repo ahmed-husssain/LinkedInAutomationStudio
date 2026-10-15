@@ -26,11 +26,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def cmd_daily_topics(ctx):
     """Interactive command to display the daily recommended topics menu."""
     view = TopicSelectionView()
-    topics_text = "\n".join([f"• **{t.title}** — *{t.tagline}*" for t in view.current_topics])
     await ctx.send(
-        f"👋 **Good morning! Here are today's recommended topics:**\n\n"
-        f"{topics_text}\n\n"
-        f"Tap a button to configure options:",
+        content=view.get_message_content(),
         view=view
     )
 
@@ -92,16 +89,10 @@ async def daily_autonomous_publisher():
             target_channel = guild.text_channels[0]
 
         if target_channel and target_channel.permissions_for(guild.me).send_messages:
-            topic = TOPIC_POOL[0]
-            from src.bot.views import TopicConfiguratorView
-            view = TopicConfiguratorView(topic)
+            view = TopicSelectionView()
             try:
                 await target_channel.send(
-                    content=(
-                        f"🌅 **Good Morning! Daily Studio Autopilot Active:**\n"
-                        f"Today's recommended topic: **{topic.title}**\n\n"
-                        f"{view.get_message_content()}"
-                    ),
+                    content=view.get_message_content(),
                     view=view
                 )
             except discord.DiscordException:
