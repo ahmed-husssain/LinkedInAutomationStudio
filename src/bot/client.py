@@ -32,6 +32,20 @@ async def cmd_daily_topics(ctx):
     )
 
 
+@bot.command(name="unlock", aliases=["reset", "clear_lock"])
+async def cmd_unlock_channel(ctx):
+    """Emergency command to force-release any pending approval lock in the channel."""
+    from src.bot.views import CHANNEL_PENDING_APPROVAL
+    from src.engines.storage_manager import purge_draft
+
+    pending = CHANNEL_PENDING_APPROVAL.pop(ctx.channel.id, None)
+    if pending and pending.get("path"):
+        purge_draft(pending["path"])
+        await ctx.send("🔓 **Channel unlocked!** Pending draft was purged and storage cleaned up.")
+    else:
+        await ctx.send("🔓 **Channel is already unlocked!** No pending drafts found.")
+
+
 @tasks.loop(seconds=DISCORD_POLL_INTERVAL_SECONDS)
 async def poll_channel_messages():
     """Background REST poller for guilds without gateway message content intent."""
@@ -103,6 +117,16 @@ async def daily_autonomous_publisher():
 async def on_ready():
     """Triggered when Discord gateway connects successfully."""
     print(f"🤖 LinkedIn Studio Bot is online as {bot.user} (ID: {bot.user.id})!", flush=True)
+
+    # Run startup storage janitor sweep
+    try:
+        from src.engines.storage_manager import prune_expired_drafts, enforce_disk_quota
+        pruned = prune_expired_drafts(max_age_hours=24.0)
+        enforced = enforce_disk_quota(max_mb=200.0, target_mb=100.0)
+        print(f"🧹 Storage Janitor: {pruned} expired drafts purged, {enforced} quota pruned.", flush=True)
+    except Exception as e:
+        print(f"⚠️ Storage Janitor sweep skipped: {e}", flush=True)
+
     if not poll_channel_messages.is_running():
         poll_channel_messages.start()
         print(f"⚡ Background REST Poller active (interval: {DISCORD_POLL_INTERVAL_SECONDS}s)", flush=True)

@@ -19,7 +19,9 @@ from src.bot.views import (
     QuickActionView,
     CHANNEL_ACTIVE_TOPIC,
     RECENT_TOPIC_IDS,
+    CHANNEL_PENDING_APPROVAL,
 )
+from src.engines.storage_manager import purge_draft
 
 
 class BoundedMessageTracker:
@@ -85,6 +87,10 @@ def match_user_intent(clean_text: str, current_topic: Topic) -> Dict:
     false positive substring collisions (e.g. 'hi' inside 'this').
     """
     lower = clean_text.lower()
+
+    # 0. Emergency Unlock / Reset command
+    if re.search(r"^(!?(unlock|reset|clear_lock))$", lower.strip()):
+        return {"intent": "UNLOCK"}
 
     # 1. Message Queue keyword matching (high priority)
     if re.search(r"\b(queues?|rabbitmq|sqs|kafka|buffer)\b", lower):
@@ -177,6 +183,23 @@ async def dispatch_user_message(
         if view:
             return await channel.send(content=content, view=view)
         return await channel.send(content=content)
+
+    if intent == "UNLOCK":
+        pending = CHANNEL_PENDING_APPROVAL.pop(channel_id, None)
+        if pending and pending.get("path"):
+            purge_draft(pending["path"])
+            await reply_or_send("🔓 **Channel unlocked!** Pending draft was purged and storage cleaned up.")
+        else:
+            await reply_or_send("🔓 **Channel is already unlocked!** No pending drafts found.")
+        return
+
+    # Check if channel is locked awaiting approval
+    if channel_id in CHANNEL_PENDING_APPROVAL and intent in ("TOPIC_MATCH", "BROWSE_TOPICS", "THUMBNAIL_OPTIONS", "SIMPLIFY", "DIFFERENT_QUESTIONS"):
+        await reply_or_send(
+            "⚠️ **Action Blocked:** You have a pending draft awaiting your review in this channel!\n\n"
+            "👉 *Please tap **'🚀 Approve & Post'** or **'❌ Reject & Discard'** on the draft above first, or type `!unlock` to reset.*"
+        )
+        return
 
     if intent == "TOPIC_MATCH":
         matched = parsed["topic"]

@@ -17,12 +17,61 @@ from src.engines.copy_engine import format_linkedin_post
 from src.engines.diagram_engine import generate_technical_diagram, THEMES
 
 from collections import deque
+from pathlib import Path
+from src.engines.storage_manager import purge_draft, promote_to_published
 
 # In-memory channel state tracker (maps channel_id to last selected Topic)
 CHANNEL_ACTIVE_TOPIC = {}
 
+# In-memory channel pending approval lock tracker (maps channel_id to pending draft info)
+CHANNEL_PENDING_APPROVAL = {}
+
 # In-memory recent topic history to prevent repeated suggestions (initialized with 'oauth' to skip previous work)
 RECENT_TOPIC_IDS: deque = deque(["oauth"], maxlen=6)
+
+
+class PostApprovalView(View):
+    """
+    Approval Gate View: Locks the channel until user Approves or Rejects the delivered draft.
+    """
+    def __init__(self, channel_id: int, file_path: Optional[Path] = None, post_text: str = ""):
+        super().__init__(timeout=86400) # 24h expiration
+        self.channel_id = channel_id
+        self.file_path = Path(file_path) if file_path else None
+        self.post_text = post_text
+
+    @discord.ui.button(label="Approve & Post to LinkedIn", style=discord.ButtonStyle.green, emoji="🚀", row=0)
+    async def approve_button(self, interaction: discord.Interaction, button: Button):
+        CHANNEL_PENDING_APPROVAL.pop(self.channel_id, None)
+        if self.file_path and self.file_path.exists():
+            promote_to_published(self.file_path)
+
+        for child in self.children:
+            child.disabled = True
+
+        await interaction.response.edit_message(
+            content=interaction.message.content + "\n\n✅ **Approved & Ready!** Draft promoted to vault. Channel unlocked.",
+            view=self
+        )
+
+    @discord.ui.button(label="Reject & Discard", style=discord.ButtonStyle.danger, emoji="❌", row=0)
+    async def reject_button(self, interaction: discord.Interaction, button: Button):
+        CHANNEL_PENDING_APPROVAL.pop(self.channel_id, None)
+        if self.file_path:
+            purge_draft(self.file_path)
+
+        for child in self.children:
+            child.disabled = True
+
+        await interaction.response.edit_message(
+            content=interaction.message.content + "\n\n🗑️ **Draft Rejected & Discarded.** Zero disk trace left. Channel unlocked.",
+            view=self
+        )
+
+    async def on_timeout(self):
+        CHANNEL_PENDING_APPROVAL.pop(self.channel_id, None)
+        if self.file_path:
+            purge_draft(self.file_path)
 
 
 async def deliver_post_package(
@@ -45,85 +94,124 @@ async def deliver_post_package(
 
     file_base = topic.id.replace("_", " ").title().replace(" ", "")
 
-    # Video delivery
-    if format_type == "video" and topic.has_video:
-        video_path = topic.video_path
-        v_file = discord.File(str(video_path), filename=f"{file_base}Animation.mp4")
+    generated_path: Optional[Path] = None
 
-        await channel.send(
-            content=(
-                f"🎉 **YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
-                f"────────────────────────────────────────\n"
-                f"{post_text}\n"
-                f"────────────────────────────────────────\n"
-                f"👉 *1. Copy post copy above*\n"
-                f"👉 *2. Video player attached below:*"
-            ),
-            file=v_file
-        )
+    try:
+        # Video delivery
+        if format_type == "video" and topic.has_video:
+            video_path = topic.video_path
+            generated_path = Path(video_path)
+            v_file = discord.File(str(video_path), filename=f"{file_base}Animation.mp4")
 
-        # Standalone thumbnail
-        thumb_path = topic.thumb_path or generate_technical_diagram(topic.id, topic.title, topic.tagline)
-        if thumb_path and thumb_path.exists():
-            t_file = discord.File(str(thumb_path), filename=f"{file_base}Thumbnail.png")
+            approval_view = PostApprovalView(channel_id=channel.id, file_path=generated_path, post_text=post_text)
+            CHANNEL_PENDING_APPROVAL[channel.id] = {
+                "path": generated_path,
+                "type": format_type,
+                "view": approval_view
+            }
+
             await channel.send(
-                content="🖼️ **Custom 1080x1080 Video Thumbnail** *(Save to camera roll to use as cover on LinkedIn)*:",
-                file=t_file
+                content=(
+                    f"🎉 **YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
+                    f"────────────────────────────────────────\n"
+                    f"{post_text}\n"
+                    f"────────────────────────────────────────\n"
+                    f"👉 *1. Copy post copy above*\n"
+                    f"👉 *2. Video player attached below:*\n\n"
+                    f"⚖️ **APPROVAL GATE:** Tap '🚀 Approve' to post, or '❌ Reject' to discard and clean up:"
+                ),
+                file=v_file,
+                view=approval_view
             )
-    elif format_type == "carousel":
-        from src.agents.carousel_builder import build_pdf_carousel
-        slides_data = []
-        for idx, a in enumerate(topic.angles):
-            lines = [line.strip().lstrip("• ") for line in a.text.split("\n") if line.strip()]
+
+            # Standalone thumbnail
+            thumb_path = topic.thumb_path or generate_technical_diagram(topic.id, topic.title, topic.tagline)
+            if thumb_path and thumb_path.exists():
+                t_file = discord.File(str(thumb_path), filename=f"{file_base}Thumbnail.png")
+                await channel.send(
+                    content="🖼️ **Custom 1080x1080 Video Thumbnail** *(Save to camera roll to use as cover on LinkedIn)*:",
+                    file=t_file
+                )
+        elif format_type == "carousel":
+            from src.agents.carousel_builder import build_pdf_carousel
+            slides_data = []
+            for idx, a in enumerate(topic.angles):
+                lines = [line.strip().lstrip("• ") for line in a.text.split("\n") if line.strip()]
+                slides_data.append({
+                    "badge": f"Concept {idx+1}",
+                    "title": a.label[:32],
+                    "subtitle": a.desc[:50] if a.desc else topic.tagline[:50],
+                    "bullets": lines[:3],
+                    "accent": "#58a6ff" if idx == 0 else "#bc8cff"
+                })
             slides_data.append({
-                "badge": f"Concept {idx+1}",
-                "title": a.label[:32],
-                "subtitle": a.desc[:50] if a.desc else topic.tagline[:50],
-                "bullets": lines[:3],
-                "accent": "#58a6ff" if idx == 0 else "#bc8cff"
+                "badge": "Key Takeaway",
+                "title": "Production Rule",
+                "subtitle": "Engineering Best Practice",
+                "bullets": [
+                    f"Never deploy {topic.subject or topic.title} without latency metrics.",
+                    "Enforce strict timeouts and circuit breaker patterns.",
+                    "Verify failure modes under simulated peak traffic."
+                ],
+                "accent": "#3fb950"
             })
-        slides_data.append({
-            "badge": "Key Takeaway",
-            "title": "Production Rule",
-            "subtitle": "Engineering Best Practice",
-            "bullets": [
-                f"Never deploy {topic.subject or topic.title} without latency metrics.",
-                "Enforce strict timeouts and circuit breaker patterns.",
-                "Verify failure modes under simulated peak traffic."
-            ],
-            "accent": "#3fb950"
-        })
-        pdf_path = build_pdf_carousel(
-            topic_id=topic.id,
-            topic_title=topic.title,
-            slides_data=slides_data,
-            senior_question=senior_question
-        )
-        pdf_file = discord.File(str(pdf_path), filename=f"{file_base}_Carousel.pdf")
-        await channel.send(
-            content=(
-                f"🎉 **YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
-                f"────────────────────────────────────────\n"
-                f"{post_text}\n"
-                f"────────────────────────────────────────\n"
-                f"📑 **Interactive 1080x1350 PDF Carousel attached below** *(Upload as 'Document' on LinkedIn for 3x reach)*:"
-            ),
-            file=pdf_file
-        )
-    else:
-        # Technical architecture diagram delivery
-        thumb_path = topic.thumb_path or generate_technical_diagram(topic.id, topic.title, topic.tagline)
-        t_file = discord.File(str(thumb_path), filename=f"{file_base}Diagram.png")
-        await channel.send(
-            content=(
-                f"🎉 **YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
-                f"────────────────────────────────────────\n"
-                f"{post_text}\n"
-                f"────────────────────────────────────────\n"
-                f"👉 *Technical diagram attached below:*"
-            ),
-            file=t_file
-        )
+            pdf_path = build_pdf_carousel(
+                topic_id=topic.id,
+                topic_title=topic.title,
+                slides_data=slides_data,
+                senior_question=senior_question
+            )
+            generated_path = Path(pdf_path)
+            pdf_file = discord.File(str(pdf_path), filename=f"{file_base}_Carousel.pdf")
+
+            approval_view = PostApprovalView(channel_id=channel.id, file_path=generated_path, post_text=post_text)
+            CHANNEL_PENDING_APPROVAL[channel.id] = {
+                "path": generated_path,
+                "type": format_type,
+                "view": approval_view
+            }
+
+            await channel.send(
+                content=(
+                    f"🎉 **YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
+                    f"────────────────────────────────────────\n"
+                    f"{post_text}\n"
+                    f"────────────────────────────────────────\n"
+                    f"📑 **Interactive 1080x1350 PDF Carousel attached below** *(Upload as 'Document' on LinkedIn for 3x reach)*:\n\n"
+                    f"⚖️ **APPROVAL GATE:** Tap '🚀 Approve' to post, or '❌ Reject' to discard and clean up:"
+                ),
+                file=pdf_file,
+                view=approval_view
+            )
+        else:
+            # Technical architecture diagram delivery
+            thumb_path = topic.thumb_path or generate_technical_diagram(topic.id, topic.title, topic.tagline)
+            generated_path = Path(thumb_path)
+            t_file = discord.File(str(thumb_path), filename=f"{file_base}Diagram.png")
+
+            approval_view = PostApprovalView(channel_id=channel.id, file_path=generated_path, post_text=post_text)
+            CHANNEL_PENDING_APPROVAL[channel.id] = {
+                "path": generated_path,
+                "type": format_type,
+                "view": approval_view
+            }
+
+            await channel.send(
+                content=(
+                    f"🎉 **YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
+                    f"────────────────────────────────────────\n"
+                    f"{post_text}\n"
+                    f"────────────────────────────────────────\n"
+                    f"👉 *Technical diagram attached below:*\n\n"
+                    f"⚖️ **APPROVAL GATE:** Tap '🚀 Approve' to post, or '❌ Reject' to discard and clean up:"
+                ),
+                file=t_file,
+                view=approval_view
+            )
+    except Exception as e:
+        CHANNEL_PENDING_APPROVAL.pop(channel.id, None)
+        await channel.send(f"❌ **Generation Error:** {e}. Channel lock released.")
+        raise
 
 
 class TopicConfiguratorView(View):
@@ -291,6 +379,17 @@ class TopicConfiguratorView(View):
                     ephemeral=True
                 )
                 return
+
+            if interaction.channel_id in CHANNEL_PENDING_APPROVAL:
+                await interaction.response.send_message(
+                    "⚠️ **Action Blocked:** You have an active draft awaiting review in this channel!\n\n"
+                    "👉 *Please tap **'🚀 Approve & Post'** or **'❌ Reject & Discard'** on the draft above first before generating a new asset (or type `!unlock` to reset).* ",
+                    ephemeral=True
+                )
+                return
+
+            # Lock immediately to prevent double-clicks
+            CHANNEL_PENDING_APPROVAL[interaction.channel_id] = {"path": None, "type": format_type}
 
             await interaction.response.defer()
             asyncio.create_task(
