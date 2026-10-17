@@ -58,3 +58,42 @@ class TestDiagramEngineAdversarial:
                 overwrite=True
             )
             assert out.exists()
+
+    def test_generate_diagram_html_fallback_to_pillow(self, tmp_path, monkeypatch):
+        """When HTML rendering crashes or fails, diagram engine must fall back to Pillow seamlessly."""
+        async def mock_fail(*args, **kwargs):
+            raise RuntimeError("Simulated browser failure for fallback verification")
+
+        monkeypatch.setattr("src.engines.html_renderer.render_html_to_image", mock_fail)
+
+        out = generate_technical_diagram(
+            topic_id="fallback_test",
+            title="Fallback Verification",
+            tagline="Pillow backup test",
+            theme="emerald",
+            output_dir=tmp_path,
+            overwrite=True
+        )
+        assert out.exists()
+        with Image.open(out) as img:
+            assert img.size == (CANVAS_WIDTH, CANVAS_HEIGHT)
+
+    def test_generate_technical_diagram_async(self, tmp_path):
+        """Verify async entrypoint directly renders high-res card."""
+        import asyncio
+        from src.engines.diagram_engine import generate_technical_diagram_async
+
+        async def _run():
+            out = await generate_technical_diagram_async(
+                topic_id="async_test_topic",
+                title="Async Playwright Render",
+                tagline="Testing direct coroutine pipeline",
+                theme="purple",
+                output_dir=tmp_path,
+                overwrite=True
+            )
+            assert out.exists()
+            with Image.open(out) as img:
+                assert img.size == (CANVAS_WIDTH, CANVAS_HEIGHT)
+
+        asyncio.run(_run())

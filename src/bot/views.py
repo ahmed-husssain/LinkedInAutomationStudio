@@ -14,7 +14,11 @@ from discord.ui import Button, View, Select
 from src.config.topics import Topic, TOPIC_POOL
 from src.engines.text_splitter import split_text_for_option
 from src.engines.copy_engine import format_linkedin_post
-from src.engines.diagram_engine import generate_technical_diagram, THEMES
+from src.engines.diagram_engine import (
+    generate_technical_diagram,
+    generate_technical_diagram_async,
+    THEMES,
+)
 
 from collections import deque
 from pathlib import Path
@@ -185,7 +189,14 @@ async def deliver_post_package(
             )
         else:
             # Technical architecture diagram delivery
-            thumb_path = topic.thumb_path or generate_technical_diagram(topic.id, topic.title, topic.tagline)
+            from src.engines.storage_manager import DRAFTS_DIR
+            thumb_path = await generate_technical_diagram_async(
+                topic.id,
+                topic.title,
+                topic.tagline,
+                output_dir=DRAFTS_DIR,
+                overwrite=True
+            )
             generated_path = Path(thumb_path)
             t_file = discord.File(str(thumb_path), filename=f"{file_base}Diagram.png")
 
@@ -582,11 +593,8 @@ class TrendingTopicsActionView(View):
                 return
             await interaction.response.defer()
             title = topic_data.get("title", "Distributed Architecture")
-            from src.engines.diagram_engine import generate_technical_diagram
-            from src.engines.copy_engine import format_linkedin_post
-            import re
             slug = re.sub(r"[^a-zA-Z0-9_]", "_", title.lower())
-            thumb_path = generate_technical_diagram(slug, title, topic_data.get("tagline", ""))
+            thumb_path = await generate_technical_diagram_async(slug, title, topic_data.get("tagline", ""))
             post_copy = format_linkedin_post(
                 topic_title=title,
                 subject=title,
@@ -649,7 +657,7 @@ class ThumbnailThemeView(View):
     def make_callback(self, theme_key: str):
         async def callback(interaction: discord.Interaction):
             await interaction.response.defer()
-            img_path = generate_technical_diagram(
+            img_path = await generate_technical_diagram_async(
                 self.topic.id,
                 self.topic.title,
                 self.topic.tagline,
