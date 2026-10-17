@@ -20,6 +20,9 @@ python-dotenv>=1.0.1
 # 2D Animation Engine for Square 1080x1080 60fps Videos
 manim>=0.18.0
 
+# Headless HTML/Tailwind Architecture Diagram Renderer
+playwright>=1.42.0
+
 # =====================================================================
 # Development, Linting & CI Testing
 # =====================================================================

@@ -7,6 +7,7 @@ dynamic topic rerolling, and 1-tap post delivery.
 import random
 import secrets
 import asyncio
+import re
 from typing import List, Optional, Callable
 import discord
 from discord.ui import Button, View, Select

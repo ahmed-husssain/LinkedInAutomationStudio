@@ -15,7 +15,7 @@ _lock: Optional[asyncio.Lock] = None
 
 
 def _get_lock() -> asyncio.Lock:
-    global _lock, _running_loop
+    global _lock
     loop = asyncio.get_running_loop()
     if _lock is None or _running_loop != loop:
         _lock = asyncio.Lock()
