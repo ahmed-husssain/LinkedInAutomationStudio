@@ -194,6 +194,8 @@ async def dispatch_user_message(
 
     if intent == "UNLOCK":
         pending = CHANNEL_PENDING_APPROVAL.pop(channel_id, None)
+        from src.bot.views import CHANNEL_CONSULTATION_STATE
+        CHANNEL_CONSULTATION_STATE.pop(channel_id, None)
         if pending and pending.get("path"):
             purge_draft(pending["path"])
             await reply_or_send("🔓 **Channel unlocked!** Pending draft was purged and storage cleaned up.")
@@ -210,6 +212,8 @@ async def dispatch_user_message(
         return
 
     if intent == "TOPIC_MATCH":
+        from src.bot.views import CHANNEL_CONSULTATION_STATE
+        CHANNEL_CONSULTATION_STATE.pop(channel_id, None)
         matched = parsed["topic"]
         CHANNEL_ACTIVE_TOPIC[channel_id] = matched
         view = TopicConfiguratorView(matched)
@@ -220,13 +224,16 @@ async def dispatch_user_message(
 
     elif intent == "GENERATE_ACTIVE_FORMAT":
         req_format = parsed["format"]
-        if req_format == "video" and not current_topic.has_video:
+        if req_format == "video":
+            from src.bot.views import AnimationConsultationView, CHANNEL_CONSULTATION_STATE
+            consult_view = AnimationConsultationView(topic=current_topic, channel_id=channel_id)
+            CHANNEL_CONSULTATION_STATE[channel_id] = {
+                "topic": current_topic,
+                "view": consult_view
+            }
             await reply_or_send(
-                content=(
-                    f"🎬 **Topic '{current_topic.title}' does not have a pre-rendered 60fps MP4 video.**\n\n"
-                    f"Would you like to generate the **Interactive PDF Carousel** or the **Technical Architecture Diagram**?"
-                ),
-                view=TopicConfiguratorView(current_topic)
+                content=consult_view.get_message_content(),
+                view=consult_view
             )
             return
 
@@ -277,6 +284,36 @@ async def dispatch_user_message(
         )
 
     else:
+        from src.bot.views import CHANNEL_CONSULTATION_STATE
+        if channel_id in CHANNEL_CONSULTATION_STATE:
+            consultation = CHANNEL_CONSULTATION_STATE.pop(channel_id)
+            c_topic = consultation["topic"]
+            custom_hook = f"We recently faced a high-stakes production challenge with {c_topic.subject or c_topic.title}: {clean_text}."
+            angle_text = (
+                f"• Production Challenge: {clean_text}\n"
+                f"• The Architecture Fix: Enforcing deterministic capacity limits with fast-path memory checks.\n"
+                f"• The Result: Traffic is shaped and bounded smoothly, preventing downstream database starvation."
+            )
+            senior_q = f"How do you handle '{clean_text}' in your production architecture?"
+
+            await reply_or_send(
+                f"🎯 **Custom Setup Captured:** *\"{clean_text}\"*\n"
+                f"🎬 Rendering animation & delivering tailored LinkedIn package for **{c_topic.title}**..."
+            )
+
+            from src.bot.views import deliver_post_package
+            asyncio.create_task(
+                deliver_post_package(
+                    channel=channel,
+                    topic=c_topic,
+                    angle_content=angle_text,
+                    senior_question=senior_q,
+                    format_type="video",
+                    custom_hook=custom_hook
+                )
+            )
+            return
+
         # Freeform conversational prompt -> Dispatch to Gemini Multi-Agent Studio!
         if message:
             try:

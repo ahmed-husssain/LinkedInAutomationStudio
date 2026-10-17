@@ -90,3 +90,57 @@ class TestPollerAdversarial:
         assert res_diag["intent"] == "GENERATE_ACTIVE_FORMAT"
         assert res_diag["format"] == "diagram"
 
+    def test_animation_consultation_dispatch_and_chat_followup(self):
+        """Video requests launch consultation view; subsequent chat reply captures custom issue."""
+        from src.bot.poller import dispatch_user_message
+        from src.bot.views import CHANNEL_ACTIVE_TOPIC, CHANNEL_CONSULTATION_STATE, AnimationConsultationView
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        async def _run():
+            mock_channel = AsyncMock()
+            mock_channel.id = 888123
+            mock_author = MagicMock()
+            mock_author.mention = "@testuser"
+
+            rate_topic = next(t for t in TOPIC_POOL if t.id == "rate_limiter")
+            CHANNEL_ACTIVE_TOPIC[mock_channel.id] = rate_topic
+            CHANNEL_CONSULTATION_STATE.pop(mock_channel.id, None)
+
+            # Step 1: User says "I want to make a video animation of that"
+            await dispatch_user_message(
+                channel=mock_channel,
+                author=mock_author,
+                raw_text="I want to make a video animation of that"
+            )
+
+            # Must have sent AnimationConsultationView and set consultation state
+            mock_channel.send.assert_called_once()
+            send_args = mock_channel.send.call_args[1]
+            assert isinstance(send_args["view"], AnimationConsultationView)
+            assert "Animation Studio Consultation" in send_args["content"]
+            assert mock_channel.id in CHANNEL_CONSULTATION_STATE
+
+            # Step 2: User replies with custom issue in chat
+            mock_channel.reset_mock()
+            with patch("src.bot.views.deliver_post_package", new_callable=AsyncMock) as mock_deliver:
+                await dispatch_user_message(
+                    channel=mock_channel,
+                    author=mock_author,
+                    raw_text="Our payment gateway locks up when 5,000 users checkout during flash sales"
+                )
+                # Consultation state must be cleared
+                assert mock_channel.id not in CHANNEL_CONSULTATION_STATE
+                # Acknowledgment message must be sent
+                mock_channel.send.assert_called_once()
+                ack_text = mock_channel.send.call_args[1]["content"]
+                assert "Custom Setup Captured" in ack_text
+                # deliver_post_package must be triggered with custom hook
+                mock_deliver.assert_called_once()
+                deliver_kwargs = mock_deliver.call_args[1]
+                assert "payment gateway locks up" in deliver_kwargs["custom_hook"]
+                assert deliver_kwargs["format_type"] == "video"
+
+        import asyncio
+        asyncio.run(_run())
+
+

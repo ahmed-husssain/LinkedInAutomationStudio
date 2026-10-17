@@ -3,7 +3,7 @@ Post Copy & Authentic Developer Voice Engine.
 Generates relatable, high-engagement LinkedIn posts while penalizing corporate AI clichés.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, field
 
 # Banned AI tropes and preachy corporate clichés
@@ -44,11 +44,12 @@ def format_linkedin_post(
     topic_title: str,
     subject: str,
     angle_content: str,
-    senior_question: str
+    senior_question: str,
+    custom_hook: Optional[str] = None
 ) -> str:
     """
     Generates the final formatted LinkedIn post using the proven 4-stage high-engagement blueprint:
-    1. Hook: Humble learning journey origin.
+    1. Hook: Humble learning journey origin (or custom punchy incident hook).
     2. Visual cue: Visual breakdown introduction.
     3. Core explanation: Clean, bulleted mental model.
     4. Senior question: Inviting real-world war stories from senior engineers.
@@ -57,16 +58,24 @@ def format_linkedin_post(
     clean_angle = (angle_content or "").strip()
     clean_q = (senior_question or "What is your approach to this in production?").strip()
 
+    if custom_hook and custom_hook.strip():
+        intro_block = f"{custom_hook.strip()}\n\nHere is how the mechanics work step-by-step:"
+    else:
+        intro_block = (
+            f"When I first started learning system design, {hook_subj} sounded super intimidating.\n\n"
+            f"I made this short visual breakdown to understand the mechanics step-by-step:\n\n"
+            f"Here is what finally made it click for me:"
+        )
+
     return (
-        f"When I first started learning system design, {hook_subj} sounded super intimidating.\n\n"
-        f"I made this short visual breakdown to understand the mechanics step-by-step:\n\n"
-        f"Here is what finally made it click for me:\n"
+        f"{intro_block}\n"
         f"{clean_angle}\n\n"
         f"Quick question for the senior engineers here:\n"
         f"👉 {clean_q}\n\n"
         f"Would love to know what is actually standard in production.\n\n"
         f"#systemdesign #backend #softwareengineering #learninginpublic"
     )
+
 
 
 def score_candidate(candidate: Dict) -> CandidatePost:

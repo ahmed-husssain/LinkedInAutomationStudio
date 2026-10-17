@@ -403,3 +403,277 @@ def get_topic_by_id(topic_id: str) -> Optional[Topic]:
         return None
     cleaned = topic_id.strip().lower()
     return next((t for t in TOPIC_POOL if t.id.lower() == cleaned), None)
+
+
+TOPIC_CONSULTATION_CONFIG = {
+    "rate_limiter": {
+        "title": "Rate Limiting Architecture",
+        "animations": [
+            {
+                "id": "token_bucket",
+                "label": "Token Bucket (Burst & Refill Rate)",
+                "emoji": "🪣",
+                "desc": "AWS & Stripe standard allowing short bursts with steady refill"
+            },
+            {
+                "id": "leaky_bucket",
+                "label": "Leaky Bucket (Traffic Shaping)",
+                "emoji": "🚰",
+                "desc": "Constant-rate FIFO queue smoothing erratic traffic spikes"
+            },
+            {
+                "id": "sliding_window",
+                "label": "Sliding Window Counter",
+                "emoji": "⏱️",
+                "desc": "High-precision Redis counters preventing 2x boundary spikes"
+            },
+            {
+                "id": "fixed_window",
+                "label": "Fixed Window Counter",
+                "emoji": "🪟",
+                "desc": "Simpler window counter; highlights boundary double-spike flaw"
+            }
+        ],
+        "issues": [
+            {
+                "id": "burst_spikes",
+                "label": "Burst Spikes Crashing Downstream DB",
+                "emoji": "💥",
+                "desc": "Traffic surges exhaust database connection pools in <2s",
+                "hook": "A sudden 10,000 req/s traffic surge crashed our PostgreSQL database in under 3 seconds. Here is why adding replicas didn't fix it — but a Token Bucket rate limiter did.",
+                "angle": "• The Burst Problem: Marketing flash sales dump 100x normal load in 500ms, starving connection pools.\n• Token Bucket Mechanics: Legitimate bursts consume accumulated tokens instantly (200 OK with zero latency).\n• The Hard Cutoff: Once empty, excess requests are throttled with HTTP 429 before touching backend services.\n• Smooth Recovery: Steady background refill restores service the millisecond traffic normalizes.",
+                "question": "Do you enforce rate limiting at the API Gateway (Kong/Envoy) or inside application Redis middleware?"
+            },
+            {
+                "id": "redis_race",
+                "label": "Redis Atomic INCR & Lua Script Latency",
+                "emoji": "⚡",
+                "desc": "Lock contention and multi-key latency under extreme concurrency",
+                "hook": "Most engineers think distributed rate limiting in Redis is just `INCR` and `EXPIRE`. In high concurrency, that race condition can cause silent limit bypasses.",
+                "angle": "• The Race Condition: Separate INCR and EXPIRE calls mean a crash leaves keys without TTL forever.\n• The Lua Fix: Atomic Lua scripts evaluate current token count and timestamp in a single round-trip.\n• The Trade-off: Heavy Lua scripts can block Redis single-threaded event loop if keys hot-spot.",
+                "question": "Do you use atomic Lua scripts in Redis or client-side token buckets with periodic sync?"
+            },
+            {
+                "id": "retry_storms",
+                "label": "HTTP 429 Causing Client Retry Storms",
+                "emoji": "🛑",
+                "desc": "Aggressive unjittered retries worsening platform downtime",
+                "hook": "Returning HTTP 429 without exponential backoff and jitter is the easiest way to turn a 10-second traffic spike into a 2-hour cascading outage.",
+                "angle": "• The Thundering Retry: Dropped clients immediately retry at the exact same millisecond.\n• Rate Limiter Headers: Always send `Retry-After` and `X-RateLimit-Reset` headers.\n• Client Defense: Full jitter backoff spreads retries across a random distribution curve.",
+                "question": "How do you enforce jittered retries across third-party API consumers?"
+            },
+            {
+                "id": "multi_region",
+                "label": "Multi-Region Cluster Sync & Drift",
+                "emoji": "🌐",
+                "desc": "Cross-datacenter latency making global limits difficult",
+                "hook": "Global rate limiting across multi-region datacenters is one of the hardest distributed systems problems. Here is why naive global Redis replication fails.",
+                "angle": "• WAN Latency: Waiting for cross-region Redis consensus adds 80ms to every API request.\n• Local Quotas: Divide global rate limits into local region quotas with periodic asynchronous reconciliation.\n• Conflict Resolution: Let local gateways throttle locally, accepting 5% edge drift for zero latency impact.",
+                "question": "Do you run regional rate limiters with split quotas or a centralized global cache?"
+            }
+        ]
+    },
+    "message_queues": {
+        "title": "Message Queue Architecture",
+        "animations": [
+            {
+                "id": "buffered_queue",
+                "label": "Buffer & Backpressure",
+                "emoji": "📥",
+                "desc": "Producers sending faster than consumers can write to DB"
+            },
+            {
+                "id": "competing_consumers",
+                "label": "Competing Consumers Scaling",
+                "emoji": "👥",
+                "desc": "Horizontal worker scaling processing jobs in parallel"
+            },
+            {
+                "id": "dead_letter",
+                "label": "Dead Letter Queue (DLQ)",
+                "emoji": "☠️",
+                "desc": "Isolating poison pills without halting queue consumer"
+            },
+            {
+                "id": "kafka_partitions",
+                "label": "Partition-Key Ordering",
+                "emoji": "📑",
+                "desc": "Strict FIFO per user ID while scaling across partitions"
+            }
+        ],
+        "issues": [
+            {
+                "id": "backpressure",
+                "label": "Consumer Lag Exhausting Broker Memory",
+                "emoji": "⏳",
+                "desc": "Slow downstream database causing queue buffer blowout",
+                "hook": "When our payments database slowed down by 300ms, our message queue backed up 400,000 messages in 12 minutes. Here is how we fixed consumer lag.",
+                "angle": "• The Backpressure Trap: Unbounded queues consume RAM until the broker crashes (OOM).\n• Worker Pool Scaling: Auto-scale consumers based on queue depth rather than CPU usage.\n• Batch Processing: Consume 100 messages per transaction rather than 1-by-1 DB inserts.",
+                "question": "Do you autoscale queue workers based on CPU or message lag depth?"
+            },
+            {
+                "id": "poison_pill",
+                "label": "Poison Pill Crashing Consumer in Loop",
+                "emoji": "☠️",
+                "desc": "Malformed payload failing deserialization repeatedly",
+                "hook": "A single malformed JSON payload halted our entire order processing pipeline for 45 minutes because of infinite NACK retries.",
+                "angle": "• The Loop: Consumer crashes, message returns to queue head (NACK), next consumer crashes immediately.\n• The DLQ Fix: After 3 failed delivery attempts, route message to Dead Letter Queue.\n• Alerting: Fire alerts on DLQ depth > 0 so engineers inspect raw payloads safely.",
+                "question": "How many retry attempts do you allow before routing to a DLQ?"
+            }
+        ]
+    },
+    "cache_aside": {
+        "title": "Cache-Aside & Redis Architecture",
+        "animations": [
+            {
+                "id": "cache_stampede",
+                "label": "Cache Stampede (Thundering Herd)",
+                "emoji": "🐃",
+                "desc": "Key TTL expiry causing 10,000 queries to hit DB at once"
+            },
+            {
+                "id": "mutex_lock",
+                "label": "Distributed Mutex Single-Flight",
+                "emoji": "🔒",
+                "desc": "Only 1 worker queries DB while others wait for cache warm"
+            },
+            {
+                "id": "bloom_filter",
+                "label": "Bloom Filter Cache Guard",
+                "emoji": "🛡️",
+                "desc": "Intercepting nonexistent keys before touching DB"
+            }
+        ],
+        "issues": [
+            {
+                "id": "stampede",
+                "label": "High-Traffic Key Expiry Crashing DB",
+                "emoji": "💥",
+                "desc": "Simultaneous cache miss overwhelming connection pool",
+                "hook": "When our homepage config key expired in Redis at 2:00 PM, 15,000 incoming requests hit Postgres simultaneously and took the site down.",
+                "angle": "• The Stampede: High-frequency keys expiring under load cause massive duplicate DB queries.\n• Mutex Lock: The first thread acquires a lock to query DB; remaining threads wait for cache to populate.\n• Probabilistic Early Refresh (XFetch): Recompute key before it officially expires based on read frequency.",
+                "question": "Do you use distributed locks or probabilistic early expiration (XFetch) for cache stampedes?"
+            }
+        ]
+    },
+    "api_idempotency": {
+        "title": "API Idempotency Architecture",
+        "animations": [
+            {
+                "id": "idempotency_key",
+                "label": "Idempotency Key Deduplication",
+                "emoji": "🔑",
+                "desc": "Header hash deduplication returning cached response"
+            },
+            {
+                "id": "db_constraint",
+                "label": "Database Unique Constraints",
+                "emoji": "🛡️",
+                "desc": "ACID unique indexes guaranteeing zero duplicate records"
+            }
+        ],
+        "issues": [
+            {
+                "id": "double_charge",
+                "label": "Network Timeout Leading to Double Payment",
+                "emoji": "💳",
+                "desc": "Client retries after timeout while first payment was processing",
+                "hook": "A customer tapped 'Pay Now', network timed out after 5 seconds, and they tapped again. Their card was charged twice. Here is how Idempotency Keys prevent this.",
+                "angle": "• The Window of Vulnerability: Request reaches server but response is lost in flight.\n• The Key: Client generates a unique UUIDv4 per intent.\n• The Lock: Backend saves the key in Redis with state 'IN_PROGRESS'; subsequent identical calls wait for the cached 200 OK.",
+                "question": "How long do you retain idempotency keys in Redis: 24 hours, or permanent DB records?"
+            }
+        ]
+    },
+    "oauth": {
+        "title": "OAuth 2.0 & PKCE Architecture",
+        "animations": [
+            {
+                "id": "pkce_flow",
+                "label": "PKCE Code Exchange Flow",
+                "emoji": "🛡️",
+                "desc": "Dynamic code verifier and challenge protecting public clients"
+            },
+            {
+                "id": "auth_code",
+                "label": "Standard 4-Step Auth Code Flow",
+                "emoji": "📜",
+                "desc": "Consent -> Code -> Token -> Profile"
+            }
+        ],
+        "issues": [
+            {
+                "id": "secret_leak",
+                "label": "Client Secrets Leaked in Mobile/SPA Bundles",
+                "emoji": "🚨",
+                "desc": "Decompiled APK exposing hardcoded API credentials",
+                "hook": "Never store an OAuth Client Secret in a Mobile App or React SPA. It takes an attacker 30 seconds to extract it with a decompiler. That is why PKCE was created.",
+                "angle": "• The Flaw: Public clients cannot keep secrets safe.\n• PKCE Magic: Client generates a random `code_verifier` and hashes it into `code_challenge`.\n• Authorization: Auth server stores the challenge and returns the code.\n• Token Exchange: Client sends original verifier; server re-hashes to prove authenticity.",
+                "question": "In Single Page Apps, do you use PKCE directly in the browser or a Backend-For-Frontend (BFF) proxy?"
+            }
+        ]
+    }
+}
+
+
+def get_topic_consultation_data(topic: Topic) -> dict:
+    """
+    Returns tailored animation mechanisms and production issues for consultation.
+    Falls back gracefully to topic angles and general architectural issues if not explicitly configured.
+    """
+    if topic.id in TOPIC_CONSULTATION_CONFIG:
+        return TOPIC_CONSULTATION_CONFIG[topic.id]
+
+    # Dynamic fallback for other or custom topics
+    animations = [
+        {
+            "id": f"angle_{idx}",
+            "label": a.label[:80],
+            "emoji": "🎬",
+            "desc": a.desc[:90] if a.desc else topic.tagline[:90]
+        }
+        for idx, a in enumerate(topic.angles)
+    ]
+    if not animations:
+        animations = [{
+            "id": "general_anim",
+            "label": f"{topic.title} Mechanics",
+            "emoji": "🎬",
+            "desc": "Step-by-step architectural breakdown"
+        }]
+
+    issues = [
+        {
+            "id": "burst_load",
+            "label": "High Concurrency & Peak Traffic Surges",
+            "emoji": "💥",
+            "desc": "Sudden traffic spikes overwhelming backend capacity",
+            "hook": f"During peak traffic hours, our {topic.subject or topic.title} implementation began bottlenecking under heavy load. Here is how we stabilized it.",
+            "angle": topic.angles[0].text if topic.angles else f"• High load mitigation for {topic.title}",
+            "question": topic.questions[0] if topic.questions else f"How do you optimize {topic.title} for high scale?"
+        },
+        {
+            "id": "latency_bottleneck",
+            "label": "P99 Latency & Connection Bottlenecks",
+            "emoji": "⚡",
+            "desc": "Tail latency creeping up and exhausting downstream connections",
+            "hook": f"P99 latency on our {topic.subject or topic.title} was creeping past acceptable SLOs. Here is what we discovered after profiling production traces.",
+            "angle": topic.angles[1].text if len(topic.angles) > 1 else (topic.angles[0].text if topic.angles else f"• Latency reduction for {topic.title}"),
+            "question": topic.questions[1] if len(topic.questions) > 1 else (topic.questions[0] if topic.questions else "What is your SLO target for this architecture?")
+        },
+        {
+            "id": "failover_resilience",
+            "label": "Failover, Retries & Cascading Outages",
+            "emoji": "🛡️",
+            "desc": "Preventing dependency failures from taking down the cluster",
+            "hook": f"Building for the happy path is easy. The real test of {topic.subject or topic.title} is what happens when network partitions or timeouts occur.",
+            "angle": "• Failure Isolation: Circuit breakers prevent retry storms.\n• Fallback Strategy: Degrade gracefully to cached or fallback responses.\n• Observability: Metric alerts before customer impact.",
+            "question": "What is your fallback strategy when dependencies time out?"
+        }
+    ]
+
+    return {
+        "title": topic.title,
+        "animations": animations,
+        "issues": issues
+    }
+

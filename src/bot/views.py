@@ -11,7 +11,7 @@ from typing import List, Optional, Callable
 import discord
 from discord.ui import Button, View, Select
 
-from src.config.topics import Topic, TOPIC_POOL
+from src.config.topics import Topic, TOPIC_POOL, get_topic_consultation_data
 from src.engines.text_splitter import split_text_for_option
 from src.engines.copy_engine import format_linkedin_post
 from src.engines.diagram_engine import (
@@ -30,8 +30,12 @@ CHANNEL_ACTIVE_TOPIC = {}
 # In-memory channel pending approval lock tracker (maps channel_id to pending draft info)
 CHANNEL_PENDING_APPROVAL = {}
 
+# In-memory channel consultation state tracker (maps channel_id to active consultation view & preferences)
+CHANNEL_CONSULTATION_STATE = {}
+
 # In-memory recent topic history to prevent repeated suggestions (initialized with 'oauth' to skip previous work)
 RECENT_TOPIC_IDS: deque = deque(["oauth"], maxlen=6)
+
 
 
 class PostRejectionRecoveryView(View):
@@ -257,12 +261,185 @@ class PostApprovalView(View):
             purge_draft(self.file_path)
 
 
+class AnimationConsultationView(View):
+    """
+    Animation Studio Consultation View.
+    Prompts the user to specify their desired animation mechanism and production issue
+    before generating the video animation and LinkedIn post.
+    """
+    def __init__(self, topic: Topic, channel_id: int):
+        super().__init__(timeout=600)
+        self.topic = topic
+        self.channel_id = channel_id
+        self.data = get_topic_consultation_data(topic)
+
+        self.selected_animation = self.data["animations"][0]["id"]
+        self.selected_issue = self.data["issues"][0]["id"]
+
+        # 1. Animation Mechanism Select Menu
+        anim_options = [
+            discord.SelectOption(
+                label=a["label"][:100],
+                value=a["id"],
+                description=a["desc"][:100],
+                emoji=a.get("emoji", "🎬"),
+                default=(a["id"] == self.selected_animation)
+            )
+            for a in self.data["animations"][:5]
+        ]
+        self.anim_select = Select(
+            placeholder="1️⃣ Select Animation / Algorithm Type",
+            options=anim_options,
+            row=0
+        )
+        self.anim_select.callback = self.on_select_animation
+        self.add_item(self.anim_select)
+
+        # 2. Production Issue Select Menu
+        issue_options = [
+            discord.SelectOption(
+                label=i["label"][:100],
+                value=i["id"],
+                description=i["desc"][:100],
+                emoji=i.get("emoji", "⚠️"),
+                default=(i["id"] == self.selected_issue)
+            )
+            for i in self.data["issues"][:5]
+        ]
+        self.issue_select = Select(
+            placeholder="2️⃣ Select Production Issue / Bottleneck",
+            options=issue_options,
+            row=1
+        )
+        self.issue_select.callback = self.on_select_issue
+        self.add_item(self.issue_select)
+
+    def get_message_content(self) -> str:
+        anim_bullets = "\n".join(
+            f"• {a.get('emoji', '🎬')} **{a['label']}:** {a['desc']}"
+            for a in self.data["animations"]
+        )
+        issue_bullets = "\n".join(
+            f"• {i.get('emoji', '⚠️')} **{i['label']}:** {i['desc']}"
+            for i in self.data["issues"]
+        )
+
+        return (
+            f"🎬 **Animation Studio Consultation: {self.data.get('title', self.topic.title)}**\n\n"
+            f"Before generating your video animation and LinkedIn post, let's clarify your exact focus:\n\n"
+            f"**1️⃣ What type of animation / algorithm mechanism do you want to show?**\n"
+            f"{anim_bullets}\n\n"
+            f"**2️⃣ What production issue or bottleneck are you facing?**\n"
+            f"{issue_bullets}\n\n"
+            f"👉 **Choose from the menus below or reply directly in chat with your custom setup!**"
+        )
+
+    async def on_select_animation(self, interaction: discord.Interaction):
+        if interaction.data and interaction.data.get("values"):
+            self.selected_animation = interaction.data["values"][0]
+            for opt in self.anim_select.options:
+                opt.default = (opt.value == self.selected_animation)
+        try:
+            await interaction.response.defer()
+        except Exception:
+            pass
+
+    async def on_select_issue(self, interaction: discord.Interaction):
+        if interaction.data and interaction.data.get("values"):
+            self.selected_issue = interaction.data["values"][0]
+            for opt in self.issue_select.options:
+                opt.default = (opt.value == self.selected_issue)
+        try:
+            await interaction.response.defer()
+        except Exception:
+            pass
+
+    @discord.ui.button(label="Generate Post & Video", style=discord.ButtonStyle.primary, emoji="🎬", row=2)
+    async def generate_video_button(self, interaction: discord.Interaction, button: Button):
+        issue_obj = next((i for i in self.data["issues"] if i["id"] == self.selected_issue), self.data["issues"][0])
+        anim_obj = next((a for a in self.data["animations"] if a["id"] == self.selected_animation), self.data["animations"][0])
+
+        custom_hook = issue_obj.get("hook", "")
+        angle_content = issue_obj.get("angle", f"• Focus: {anim_obj['label']}\n• Challenge: {issue_obj['desc']}")
+        senior_q = issue_obj.get("question", self.topic.questions[0])
+
+        for child in self.children:
+            child.disabled = True
+
+        try:
+            await interaction.response.edit_message(
+                content=interaction.message.content + f"\n\n⚙️ **Generating tailored package for:** `{anim_obj['label']}` dealing with `{issue_obj['label']}`...",
+                view=self
+            )
+        except Exception:
+            pass
+
+        CHANNEL_CONSULTATION_STATE.pop(self.channel_id, None)
+
+        target_channel = interaction.channel if hasattr(interaction, "channel") and interaction.channel else None
+        if target_channel:
+            await deliver_post_package(
+                channel=target_channel,
+                topic=self.topic,
+                angle_content=angle_content,
+                senior_question=senior_q,
+                format_type="video",
+                custom_hook=custom_hook
+            )
+
+    @discord.ui.button(label="Generate Carousel Instead", style=discord.ButtonStyle.secondary, emoji="📑", row=2)
+    async def generate_carousel_button(self, interaction: discord.Interaction, button: Button):
+        issue_obj = next((i for i in self.data["issues"] if i["id"] == self.selected_issue), self.data["issues"][0])
+        anim_obj = next((a for a in self.data["animations"] if a["id"] == self.selected_animation), self.data["animations"][0])
+
+        custom_hook = issue_obj.get("hook", "")
+        angle_content = issue_obj.get("angle", f"• Focus: {anim_obj['label']}\n• Challenge: {issue_obj['desc']}")
+        senior_q = issue_obj.get("question", self.topic.questions[0])
+
+        for child in self.children:
+            child.disabled = True
+
+        try:
+            await interaction.response.edit_message(
+                content=interaction.message.content + f"\n\n📑 **Generating tailored Carousel for:** `{anim_obj['label']}` dealing with `{issue_obj['label']}`...",
+                view=self
+            )
+        except Exception:
+            pass
+
+        CHANNEL_CONSULTATION_STATE.pop(self.channel_id, None)
+
+        target_channel = interaction.channel if hasattr(interaction, "channel") and interaction.channel else None
+        if target_channel:
+            await deliver_post_package(
+                channel=target_channel,
+                topic=self.topic,
+                angle_content=angle_content,
+                senior_question=senior_q,
+                format_type="carousel",
+                custom_hook=custom_hook
+            )
+
+    @discord.ui.button(label="Custom Issue (Chat)", style=discord.ButtonStyle.secondary, emoji="✍️", row=2)
+    async def custom_issue_button(self, interaction: discord.Interaction, button: Button):
+        try:
+            await interaction.response.send_message(
+                "✍️ **Tell me your specific setup or issue in chat:**\n"
+                "(e.g. *\"Our payment gateway gets flooded when 5,000 users checkout at once and Redis Lua locks up\"*)\n\n"
+                "I'll craft the hook, architecture breakdown, and animation tailored to your exact production bottleneck!",
+                ephemeral=True
+            )
+        except Exception:
+            pass
+
+
 async def deliver_post_package(
     channel: discord.TextChannel,
     topic: Topic,
     angle_content: str,
     senior_question: str,
-    format_type: str = "video"
+    format_type: str = "video",
+    custom_hook: Optional[str] = None
 ):
     """
     Renders and sends the complete LinkedIn package to the Discord channel
@@ -272,12 +449,14 @@ async def deliver_post_package(
         topic_title=topic.title,
         subject=topic.subject or topic.title,
         angle_content=angle_content,
-        senior_question=senior_question
+        senior_question=senior_question,
+        custom_hook=custom_hook
     )
 
     file_base = topic.id.replace("_", " ").title().replace(" ", "")
 
     generated_path: Optional[Path] = None
+
 
     try:
         # Video delivery

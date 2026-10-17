@@ -6,7 +6,7 @@ rejection instant purge, timeout auto-eviction, and emergency unlock.
 
 import pytest
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from pathlib import Path
 
 from src.bot.views import (
@@ -175,4 +175,61 @@ def test_post_rejection_recovery_view_actions():
         mock_interaction_pick.response.send_message.assert_called_once()
 
     asyncio.run(_run())
+
+
+def test_animation_consultation_view_interactions():
+    """Verifies that AnimationConsultationView asks what animation type and production issue, and renders tailored content."""
+    from src.bot.views import AnimationConsultationView
+
+    async def _run():
+        rate_topic = next(t for t in TOPIC_POOL if t.id == "rate_limiter")
+        consult = AnimationConsultationView(topic=rate_topic, channel_id=999)
+
+        # 1. Content must ask what animation type and what production issue
+        content = consult.get_message_content()
+        assert "Animation Studio Consultation" in content
+        assert "What type of animation" in content
+        assert "What production issue" in content
+        assert "Token Bucket" in content
+        assert "Burst Spikes" in content
+
+        # 2. Test animation select callback
+        mock_anim_interaction = MagicMock()
+        mock_anim_interaction.data = {"values": ["leaky_bucket"]}
+        mock_anim_interaction.response.defer = AsyncMock()
+        await consult.on_select_animation(mock_anim_interaction)
+        assert consult.selected_animation == "leaky_bucket"
+
+        # 3. Test issue select callback
+        mock_issue_interaction = MagicMock()
+        mock_issue_interaction.data = {"values": ["redis_race"]}
+        mock_issue_interaction.response.defer = AsyncMock()
+        await consult.on_select_issue(mock_issue_interaction)
+        assert consult.selected_issue == "redis_race"
+
+        # 4. Test generate video button
+        mock_btn_interaction = MagicMock()
+        mock_btn_interaction.message.content = "Original Content"
+        mock_btn_interaction.response.edit_message = AsyncMock()
+        mock_btn_interaction.channel = AsyncMock()
+
+        with patch("src.bot.views.deliver_post_package", new_callable=AsyncMock) as mock_deliver:
+            await consult.generate_video_button.callback(mock_btn_interaction)
+            mock_btn_interaction.response.edit_message.assert_called_once()
+            mock_deliver.assert_called_once()
+            call_kwargs = mock_deliver.call_args[1]
+            assert call_kwargs["format_type"] == "video"
+            assert "Redis" in call_kwargs["custom_hook"] or "race condition" in call_kwargs["custom_hook"]
+
+        # 5. Test custom issue chat button
+        mock_chat_interaction = MagicMock()
+        mock_chat_interaction.response.send_message = AsyncMock()
+        await consult.custom_issue_button.callback(mock_chat_interaction)
+        mock_chat_interaction.response.send_message.assert_called_once()
+        chat_prompt = mock_chat_interaction.response.send_message.call_args[0][0]
+        assert "Tell me your specific setup or issue in chat" in chat_prompt
+
+    asyncio.run(_run())
+
+
 
