@@ -460,32 +460,36 @@ async def deliver_post_package(
     generated_path: Optional[Path] = None
 
     try:
-        # Video delivery: dynamically resolves exact algorithm animation
+        # Video delivery: dynamically resolves exact algorithm animation via Video Engine
         if format_type == "video":
-            anim_file_map = {
-                "token_bucket": "TokenBucketScene.mp4",
-                "leaky_bucket": "LeakyBucketScene.mp4",
-                "fixed_window": "FixedWindowScene.mp4",
-                "sliding_window": "SlidingWindowScene.mp4",
-            }
-            chosen_filename = None
-            if animation_id and animation_id in anim_file_map:
-                chosen_filename = anim_file_map[animation_id]
-            elif topic.video_filename:
-                chosen_filename = topic.video_filename
+            from src.engines.video_engine import resolve_video_path
 
             video_path = None
-            if chosen_filename:
-                p = Path("assets/videos") / chosen_filename
-                if p.exists():
-                    video_path = p
+            chosen_filename = None
+
+            if animation_id:
+                video_path = resolve_video_path(animation_id)
+                if video_path:
+                    chosen_filename = video_path.name
+            elif topic.video_filename:
+                video_path = resolve_video_path(topic.video_filename)
+                if video_path:
+                    chosen_filename = video_path.name
+
             if not video_path and topic.video_path and topic.video_path.exists():
                 video_path = topic.video_path
                 chosen_filename = topic.video_path.name
 
-            if video_path and video_path.exists():
-                generated_path = Path(video_path)
-                v_file = discord.File(str(video_path), filename=chosen_filename or f"{file_base}Animation.mp4")
+            if not video_path or not video_path.exists():
+                CHANNEL_PENDING_APPROVAL.pop(channel.id, None)
+                await channel.send(
+                    f"⚠️ **Video Generation Error:** Animation asset for `{animation_id or topic.title}` could not be resolved.\n"
+                    f"👉 *No silent fallback was served to protect technical accuracy.*"
+                )
+                return
+
+            generated_path = Path(video_path)
+            v_file = discord.File(str(video_path), filename=chosen_filename or f"{file_base}Animation.mp4")
 
 
             approval_view = PostApprovalView(
@@ -801,6 +805,19 @@ class TopicConfiguratorView(View):
                     "⚠️ **Action Blocked:** You have an active draft awaiting review in this channel!\n\n"
                     "👉 *Please tap **'🚀 Approve & Post'** or **'❌ Reject & Discard'** on the draft above first before generating a new asset (or type `!unlock` to reset).* ",
                     ephemeral=True
+                )
+                return
+
+            if format_type == "video":
+                from src.bot.views import AnimationConsultationView, CHANNEL_CONSULTATION_STATE
+                consult_view = AnimationConsultationView(topic=self.topic, channel_id=interaction.channel_id)
+                CHANNEL_CONSULTATION_STATE[interaction.channel_id] = {
+                    "topic": self.topic,
+                    "view": consult_view
+                }
+                await interaction.response.send_message(
+                    content=consult_view.get_message_content(),
+                    view=consult_view
                 )
                 return
 
