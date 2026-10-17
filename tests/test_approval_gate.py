@@ -232,4 +232,65 @@ def test_animation_consultation_view_interactions():
     asyncio.run(_run())
 
 
+def test_dynamic_video_resolution_for_all_rate_limiter_algorithms():
+    """Verifies that selecting leaky_bucket, fixed_window, or sliding_window delivers their distinct mp4 video files."""
+    from src.bot.views import deliver_post_package, CHANNEL_PENDING_APPROVAL
+
+    async def _run():
+        rate_topic = next(t for t in TOPIC_POOL if t.id == "rate_limiter")
+        mock_channel = AsyncMock()
+        mock_channel.id = 777001
+
+        # Test 1: Leaky Bucket delivery
+        CHANNEL_PENDING_APPROVAL.pop(mock_channel.id, None)
+        await deliver_post_package(
+            channel=mock_channel,
+            topic=rate_topic,
+            angle_content="Leaky Bucket test angle",
+            senior_question="Test Q",
+            format_type="video",
+            animation_id="leaky_bucket"
+        )
+        assert mock_channel.send.called
+        video_call_file = mock_channel.send.call_args_list[0][1]["file"]
+        assert "LeakyBucketScene.mp4" in video_call_file.filename
+        assert CHANNEL_PENDING_APPROVAL[mock_channel.id]["path"].name == "LeakyBucketScene.mp4"
+
+        # Test 2: Fixed Window delivery
+        mock_channel.reset_mock()
+        CHANNEL_PENDING_APPROVAL.pop(mock_channel.id, None)
+        await deliver_post_package(
+            channel=mock_channel,
+            topic=rate_topic,
+            angle_content="Fixed Window test angle",
+            senior_question="Test Q",
+            format_type="video",
+            animation_id="fixed_window"
+        )
+        assert mock_channel.send.called
+        video_call_file = mock_channel.send.call_args_list[0][1]["file"]
+        assert "FixedWindowScene.mp4" in video_call_file.filename
+        assert CHANNEL_PENDING_APPROVAL[mock_channel.id]["path"].name == "FixedWindowScene.mp4"
+
+        # Test 3: Sliding Window delivery
+        mock_channel.reset_mock()
+        CHANNEL_PENDING_APPROVAL.pop(mock_channel.id, None)
+        await deliver_post_package(
+            channel=mock_channel,
+            topic=rate_topic,
+            angle_content="Sliding Window test angle",
+            senior_question="Test Q",
+            format_type="video",
+            animation_id="sliding_window"
+        )
+        assert mock_channel.send.called
+        video_call_file = mock_channel.send.call_args_list[0][1]["file"]
+        assert "SlidingWindowScene.mp4" in video_call_file.filename
+        assert CHANNEL_PENDING_APPROVAL[mock_channel.id]["path"].name == "SlidingWindowScene.mp4"
+
+    asyncio.run(_run())
+
+
+
+
 

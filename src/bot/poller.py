@@ -288,6 +288,18 @@ async def dispatch_user_message(
         if channel_id in CHANNEL_CONSULTATION_STATE:
             consultation = CHANNEL_CONSULTATION_STATE.pop(channel_id)
             c_topic = consultation["topic"]
+
+            lower_clean = clean_text.lower()
+            detected_anim = "token_bucket"
+            if re.search(r"\b(leaky|funnel|shaping|smooth)\b", lower_clean):
+                detected_anim = "leaky_bucket"
+            elif re.search(r"\b(fixed|fixed\s*window|boundary)\b", lower_clean):
+                detected_anim = "fixed_window"
+            elif re.search(r"\b(sliding|sliding\s*window|zset|sorted\s*set|logs?)\b", lower_clean):
+                detected_anim = "sliding_window"
+            elif re.search(r"\b(token|burst|capacity|refill)\b", lower_clean):
+                detected_anim = "token_bucket"
+
             custom_hook = f"We recently faced a high-stakes production challenge with {c_topic.subject or c_topic.title}: {clean_text}."
             angle_text = (
                 f"• Production Challenge: {clean_text}\n"
@@ -309,7 +321,8 @@ async def dispatch_user_message(
                     angle_content=angle_text,
                     senior_question=senior_q,
                     format_type="video",
-                    custom_hook=custom_hook
+                    custom_hook=custom_hook,
+                    animation_id=detected_anim
                 )
             )
             return

@@ -233,3 +233,173 @@ class TokenBucketThumbnail(Scene):
 
         self.add(pill, title, sub, bucket, b_label, tokens_grp, left_grp, right_grp, bot_grp)
 
+
+class LeakyBucketScene(Scene):
+    """
+    Manim Animation: Leaky Bucket Rate Limiter (Traffic Shaping)
+    Explains:
+    1. Funnel/Bucket buffer smoothing chaotic inflow bursts
+    2. Constant leak outflow (1 req/sec -> 200 OK) protecting backend DB
+    3. Inflow exceeding capacity -> Overflow drop with HTTP 429
+    """
+    def construct(self):
+        self.camera.background_color = DARK_BG
+
+        # 1. Header
+        badge = RoundedRectangle(corner_radius=0.1, height=0.45, width=3.6, color=CYAN, fill_color=CARD_BG, fill_opacity=0.9)
+        badge_txt = Text("SYSTEM DESIGN BREAKDOWN", font_size=15, color=CYAN, weight=BOLD).move_to(badge.get_center())
+        header_grp = VGroup(badge, badge_txt).to_edge(UP, buff=0.4)
+
+        title = Text("Leaky Bucket: Traffic Shaping", font_size=32, weight=BOLD, color=WHITE).next_to(header_grp, DOWN, buff=0.2)
+
+        # HUD Panel (Top Right): Leak Rate
+        hud_box = RoundedRectangle(corner_radius=0.15, height=0.7, width=3.4, color=MUTED, fill_color=CARD_BG, fill_opacity=0.9).to_corner(UR, buff=0.5)
+        hud_label = Text("OUTFLOW: 1 req/sec", font_size=16, color=YELLOW, weight=BOLD).move_to(hud_box.get_center())
+        hud_grp = VGroup(hud_box, hud_label)
+
+        # Step Banner (Bottom)
+        step_bg = RoundedRectangle(corner_radius=0.15, height=0.6, width=9.2, color="#30363d", fill_color=CARD_BG, fill_opacity=0.95).to_edge(DOWN, buff=0.5)
+        step_txt = Text("Step 1: Chaotic burst arrives -> Buffered in bucket queue", font_size=18, color=WHITE).move_to(step_bg.get_center())
+
+        self.play(FadeIn(header_grp), Write(title), FadeIn(hud_grp), FadeIn(step_bg), Write(step_txt), run_time=1.2)
+
+        # 2. Draw Funnel/Bucket with Bottom Spout
+        b_left = Line(LEFT * 1.4 + UP * 1.0, LEFT * 0.5 + DOWN * 0.8, color=CYAN, stroke_width=4)
+        b_spout_l = Line(LEFT * 0.5 + DOWN * 0.8, LEFT * 0.5 + DOWN * 1.4, color=CYAN, stroke_width=4)
+        b_right = Line(RIGHT * 1.4 + UP * 1.0, RIGHT * 0.5 + DOWN * 0.8, color=CYAN, stroke_width=4)
+        b_spout_r = Line(RIGHT * 0.5 + DOWN * 0.8, RIGHT * 0.5 + DOWN * 1.4, color=CYAN, stroke_width=4)
+        bucket = VGroup(b_left, b_spout_l, b_right, b_spout_r).move_to(LEFT * 0.5 + DOWN * 0.2)
+        b_label = Text("Leaky Bucket Buffer (Cap = 3)", font_size=17, color=CYAN, weight=BOLD).next_to(bucket, DOWN, buff=0.3)
+
+        # Backend Server
+        server_box = RoundedRectangle(corner_radius=0.15, height=2.0, width=2.0, color="#8b949e", fill_color=CARD_BG, fill_opacity=0.9).move_to(RIGHT * 3.8 + DOWN * 0.4)
+        server_title = Text("Backend\nDatabase", font_size=17, color=WHITE, weight=BOLD).move_to(server_box.get_center())
+        server_grp = VGroup(server_box, server_title)
+
+        self.play(Create(bucket), Write(b_label), Create(server_grp), run_time=1.0)
+
+        # 3. Burst traffic drops in
+        drops = []
+        for i in range(3):
+            d = Circle(radius=0.25, color=CYAN, fill_color=CYAN, fill_opacity=0.85, stroke_width=2)
+            lbl = Text(f"R{i+1}", font_size=14, color=BLACK, weight=BOLD).move_to(d.get_center())
+            grp = VGroup(d, lbl).move_to(bucket.get_top() + UP * 1.0 + LEFT * 0.5)
+            self.play(grp.animate.move_to(bucket.get_center() + DOWN * (0.3 - i * 0.45) + LEFT * 0.1), run_time=0.35)
+            drops.append(grp)
+
+        # 4. Smooth leak out of spout at constant rate
+        step2_txt = Text("Step 2: Constant Leak Rate -> Smooth outflow protects DB!", font_size=18, color=GREEN).move_to(step_bg.get_center())
+        self.play(Transform(step_txt, step2_txt), run_time=0.4)
+
+        for i in range(2):
+            d = drops.pop(0)
+            ok_txt = Text("200 OK", font_size=14, color=GREEN, weight=BOLD).move_to(d.get_center())
+            self.play(d.animate.move_to(bucket.get_bottom() + DOWN * 0.4), run_time=0.4)
+            self.play(Transform(d[1], ok_txt), d.animate.move_to(server_box.get_center() + UP * (0.3 - i * 0.6)), run_time=0.5)
+
+        # 5. Overflow -> 429
+        step3_txt = Text("Step 3: Inflow exceeds capacity -> Overflows with HTTP 429!", font_size=18, color=RED).move_to(step_bg.get_center())
+        self.play(Transform(step_txt, step3_txt), run_time=0.4)
+
+        overflow_d = Circle(radius=0.25, color=RED, fill_color=RED, fill_opacity=0.85, stroke_width=2).move_to(bucket.get_top() + UP * 0.8)
+        o_lbl = Text("R4", font_size=14, color=WHITE, weight=BOLD).move_to(overflow_d.get_center())
+        o_grp = VGroup(overflow_d, o_lbl)
+
+        err_badge = RoundedRectangle(corner_radius=0.1, height=0.45, width=3.2, color=RED, fill_color=CARD_BG, fill_opacity=0.95).move_to(UP * 1.5 + RIGHT * 1.5)
+        err_txt = Text("HTTP 429 Buffer Overflow", font_size=14, color=RED, weight=BOLD).move_to(err_badge.get_center())
+
+        self.play(FadeIn(o_grp), o_grp.animate.move_to(bucket.get_top() + RIGHT * 1.2), Create(err_badge), Write(err_txt), run_time=0.8)
+        self.wait(0.5)
+
+        # 6. Key Takeaway
+        takeaway_box = RoundedRectangle(corner_radius=0.15, height=0.7, width=9.4, color=YELLOW, fill_color=CARD_BG, fill_opacity=0.98).move_to(DOWN * 0.2)
+        takeaway_txt = Text("KEY TAKEAWAY: Leaky Bucket shapes chaotic bursts into smooth constant outflow.", font_size=17, color=YELLOW, weight=BOLD).move_to(takeaway_box.get_center())
+        self.play(FadeIn(VGroup(takeaway_box, takeaway_txt)), FadeOut(err_badge), FadeOut(err_txt), FadeOut(o_grp), run_time=0.6)
+        self.wait(1.5)
+
+
+class FixedWindowScene(Scene):
+    """
+    Manim Animation: Fixed Window Counter (The 2x Boundary Spike)
+    Explains:
+    1. Counter resets at fixed clock intervals (e.g. 1 minute)
+    2. The Flaw: Sending max limit at 0:59 and max limit at 1:01
+    3. The 2-second burst overloads downstream services with 200% capacity!
+    """
+    def construct(self):
+        self.camera.background_color = DARK_BG
+
+        badge = RoundedRectangle(corner_radius=0.1, height=0.45, width=3.6, color=CYAN, fill_color=CARD_BG, fill_opacity=0.9)
+        badge_txt = Text("SYSTEM DESIGN BREAKDOWN", font_size=15, color=CYAN, weight=BOLD).move_to(badge.get_center())
+        header_grp = VGroup(badge, badge_txt).to_edge(UP, buff=0.4)
+
+        title = Text("Fixed Window: The 2x Boundary Flaw", font_size=32, weight=BOLD, color=WHITE).next_to(header_grp, DOWN, buff=0.2)
+
+        step_bg = RoundedRectangle(corner_radius=0.15, height=0.6, width=9.2, color="#30363d", fill_color=CARD_BG, fill_opacity=0.95).to_edge(DOWN, buff=0.5)
+        step_txt = Text("Limit: 100 req/min | Window 1: [0:00 - 1:00] | Window 2: [1:00 - 2:00]", font_size=17, color=WHITE).move_to(step_bg.get_center())
+
+        self.play(FadeIn(header_grp), Write(title), FadeIn(step_bg), Write(step_txt))
+
+        line = Line(LEFT * 5.0, RIGHT * 5.0, color=MUTED, stroke_width=4).move_to(DOWN * 0.4)
+        boundary = DashedLine(UP * 1.5, DOWN * 1.5, color=RED, stroke_width=4).move_to(line.get_center())
+        b_label = Text("Clock Reset (1:00)", font_size=16, color=RED, weight=BOLD).next_to(boundary, UP, buff=0.2)
+
+        w1_box = RoundedRectangle(corner_radius=0.1, height=2.2, width=4.5, color=CYAN, fill_color=CARD_BG, fill_opacity=0.6).move_to(LEFT * 2.5 + DOWN * 0.4)
+        w1_txt = Text("Window 1: 0:00 - 1:00", font_size=16, color=CYAN, weight=BOLD).move_to(w1_box.get_top() + DOWN * 0.3)
+        w1_counter = Text("Counter: 100 / 100", font_size=18, color=YELLOW, weight=BOLD).move_to(w1_box.get_center())
+
+        w2_box = RoundedRectangle(corner_radius=0.1, height=2.2, width=4.5, color=GREEN, fill_color=CARD_BG, fill_opacity=0.6).move_to(RIGHT * 2.5 + DOWN * 0.4)
+        w2_txt = Text("Window 2: 1:00 - 2:00", font_size=16, color=GREEN, weight=BOLD).move_to(w2_box.get_top() + DOWN * 0.3)
+        w2_counter = Text("Counter: 100 / 100", font_size=18, color=YELLOW, weight=BOLD).move_to(w2_box.get_center())
+
+        self.play(Create(line), Create(boundary), Write(b_label), FadeIn(w1_box), Write(w1_txt), Write(w1_counter), FadeIn(w2_box), Write(w2_txt), Write(w2_counter), run_time=1.2)
+
+        spike_banner = RoundedRectangle(corner_radius=0.15, height=0.7, width=7.5, color=RED, fill_color=CARD_BG, fill_opacity=0.95).move_to(UP * 1.5)
+        spike_txt = Text("CRITICAL FLAW: 200 requests pass in 2 seconds!", font_size=18, color=RED, weight=BOLD).move_to(spike_banner.get_center())
+        self.play(FadeIn(spike_banner), Write(spike_txt), run_time=0.8)
+
+        takeaway_box = RoundedRectangle(corner_radius=0.15, height=0.7, width=9.5, color=YELLOW, fill_color=CARD_BG, fill_opacity=0.98).move_to(DOWN * 0.4)
+        takeaway_txt = Text("KEY TAKEAWAY: Fixed Window allows 2x limit spikes across boundary resets.", font_size=17, color=YELLOW, weight=BOLD).move_to(takeaway_box.get_center())
+        self.play(FadeIn(VGroup(takeaway_box, takeaway_txt)), FadeOut(spike_banner), FadeOut(spike_txt), run_time=0.8)
+        self.wait(1.5)
+
+
+class SlidingWindowScene(Scene):
+    """
+    Manim Animation: Sliding Window Counter (Redis Sorted Sets)
+    Explains:
+    1. Continuous moving time window (now - 60s)
+    2. Storing requests in Redis ZSET: score = timestamp
+    3. Pruning expired entries: ZREMRANGEBYSCORE key 0 (now - 60)
+    4. Precise rate limiting eliminating boundary spikes!
+    """
+    def construct(self):
+        self.camera.background_color = DARK_BG
+
+        badge = RoundedRectangle(corner_radius=0.1, height=0.45, width=3.6, color=CYAN, fill_color=CARD_BG, fill_opacity=0.9)
+        badge_txt = Text("SYSTEM DESIGN BREAKDOWN", font_size=15, color=CYAN, weight=BOLD).move_to(badge.get_center())
+        header_grp = VGroup(badge, badge_txt).to_edge(UP, buff=0.4)
+
+        title = Text("Sliding Window: Precision Limiting", font_size=32, weight=BOLD, color=WHITE).next_to(header_grp, DOWN, buff=0.2)
+
+        step_bg = RoundedRectangle(corner_radius=0.15, height=0.6, width=9.2, color="#30363d", fill_color=CARD_BG, fill_opacity=0.95).to_edge(DOWN, buff=0.5)
+        step_txt = Text("Redis Sorted Set (ZSET): Sliding 60-second window bracket", font_size=17, color=WHITE).move_to(step_bg.get_center())
+
+        self.play(FadeIn(header_grp), Write(title), FadeIn(step_bg), Write(step_txt))
+
+        line = Line(LEFT * 5.0, RIGHT * 5.0, color=MUTED, stroke_width=4).move_to(DOWN * 0.4)
+        bracket = RoundedRectangle(corner_radius=0.15, height=2.2, width=4.5, color=CYAN, fill_color=CARD_BG, fill_opacity=0.6).move_to(LEFT * 1.0 + DOWN * 0.4)
+        b_txt = Text("Active Window: [t - 60s, t]", font_size=16, color=CYAN, weight=BOLD).move_to(bracket.get_top() + DOWN * 0.3)
+
+        cmd_box = RoundedRectangle(corner_radius=0.1, height=0.55, width=6.5, color=GREEN, fill_color=CARD_BG, fill_opacity=0.9).move_to(UP * 1.5)
+        cmd_txt = Text("1. ZREMRANGEBYSCORE key 0 (now-60s)", font_size=16, color=GREEN, weight=BOLD).move_to(cmd_box.get_center())
+
+        self.play(Create(line), FadeIn(bracket), Write(b_txt), FadeIn(cmd_box), Write(cmd_txt), run_time=1.0)
+        self.play(bracket.animate.shift(RIGHT * 2.0), run_time=1.2)
+
+        takeaway_box = RoundedRectangle(corner_radius=0.15, height=0.7, width=9.5, color=YELLOW, fill_color=CARD_BG, fill_opacity=0.98).move_to(DOWN * 0.4)
+        takeaway_txt = Text("KEY TAKEAWAY: Sliding Window eliminates boundary spikes with Redis timestamp logs.", font_size=17, color=YELLOW, weight=BOLD).move_to(takeaway_box.get_center())
+        self.play(FadeIn(VGroup(takeaway_box, takeaway_txt)), FadeOut(cmd_box), FadeOut(cmd_txt), run_time=0.8)
+        self.wait(1.5)
+
+

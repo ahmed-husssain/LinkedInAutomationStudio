@@ -384,7 +384,8 @@ class AnimationConsultationView(View):
                 angle_content=angle_content,
                 senior_question=senior_q,
                 format_type="video",
-                custom_hook=custom_hook
+                custom_hook=custom_hook,
+                animation_id=self.selected_animation
             )
 
     @discord.ui.button(label="Generate Carousel Instead", style=discord.ButtonStyle.secondary, emoji="📑", row=2)
@@ -439,7 +440,8 @@ async def deliver_post_package(
     angle_content: str,
     senior_question: str,
     format_type: str = "video",
-    custom_hook: Optional[str] = None
+    custom_hook: Optional[str] = None,
+    animation_id: Optional[str] = None
 ):
     """
     Renders and sends the complete LinkedIn package to the Discord channel
@@ -457,13 +459,34 @@ async def deliver_post_package(
 
     generated_path: Optional[Path] = None
 
-
     try:
-        # Video delivery
-        if format_type == "video" and topic.has_video:
-            video_path = topic.video_path
-            generated_path = Path(video_path)
-            v_file = discord.File(str(video_path), filename=f"{file_base}Animation.mp4")
+        # Video delivery: dynamically resolves exact algorithm animation
+        if format_type == "video":
+            anim_file_map = {
+                "token_bucket": "TokenBucketScene.mp4",
+                "leaky_bucket": "LeakyBucketScene.mp4",
+                "fixed_window": "FixedWindowScene.mp4",
+                "sliding_window": "SlidingWindowScene.mp4",
+            }
+            chosen_filename = None
+            if animation_id and animation_id in anim_file_map:
+                chosen_filename = anim_file_map[animation_id]
+            elif topic.video_filename:
+                chosen_filename = topic.video_filename
+
+            video_path = None
+            if chosen_filename:
+                p = Path("assets/videos") / chosen_filename
+                if p.exists():
+                    video_path = p
+            if not video_path and topic.video_path and topic.video_path.exists():
+                video_path = topic.video_path
+                chosen_filename = topic.video_path.name
+
+            if video_path and video_path.exists():
+                generated_path = Path(video_path)
+                v_file = discord.File(str(video_path), filename=chosen_filename or f"{file_base}Animation.mp4")
+
 
             approval_view = PostApprovalView(
                 channel_id=channel.id,
