@@ -152,16 +152,20 @@ class ContentStrategistAgent:
         """
         prompt = (
             f"Generate {count} unique, viral, top-1% system architecture topics for LinkedIn. "
-            f"Focus on real-world engineering war stories, counter-intuitive production bugs, "
-            f"or deep internal mechanics that senior engineers love debating (e.g. Netflix, Discord, Stripe, Uber, Cloudflare).\n"
+            f"CRITICAL CONSTRAINT: Every topic MUST be a SINGLE, BITE-SIZED, HIGHLY VISUALIZABLE engineering mechanism "
+            f"that can be completely explained in a 10-second video, a 4-tier 2D architecture diagram, or a 5-slide PDF carousel. "
+            f"NEVER suggest sprawling enterprise architectures or vague broad topics. "
+            f"Each topic must have a concrete physical or visual mental model (e.g. Token Bucket water refills, "
+            f"Bloom Filter bit arrays, Cache Stampede mutex gates, B-Tree index pointer hops, Circuit Breaker 3-state transitions, "
+            f"Consistent Hashing node rings, WAL sequential appends).\n"
             f"Return JSON list: [{{'title': '...', 'tagline': '...', 'hook': '...', 'why_it_works': '...'}}]"
         )
         response_text = self.client.generate(
             prompt=prompt,
             system_instruction=(
-                "You are the Lead Content Strategist for top tech influencers (like ByteByteGo / Alex Xu). "
-                "Never suggest generic beginner topics like 'what is an array' or 'basic oauth'. "
-                "Suggest gripping, high-retention topics about real distributed systems trade-offs."
+                "You are the Lead Visual Technical Strategist for top engineering creators (like ByteByteGo / Alex Xu). "
+                "Never suggest generic broad topics or multi-service enterprise sprawl. "
+                "Suggest razor-sharp, bite-sized topics that can be visualized in 1 diagram or 10-second animation."
             ),
             json_mode=True
         )
@@ -179,24 +183,24 @@ class ContentStrategistAgent:
         except (json.JSONDecodeError, KeyError, TypeError, ValueError) as err:
             logger.debug("Failed parsing AI trending topics JSON, using curated pool: %s", err)
 
-        # High-retention curated fallback
+        # High-retention bite-sized curated fallback
         return [
             {
-                "title": "The Thundering Herd: How Cache Stampedes Melt Redis",
-                "tagline": "Why 10,000 simultaneous cache misses crash databases (and how XFetch prevents it).",
-                "hook": "Our Redis cluster hit 100% CPU when a single popular cache key expired during peak traffic.",
-                "why_it_works": "Piques curiosity on mutual exclusion locking vs XFetch early expiration."
+                "title": "Token Bucket vs Leaky Bucket: Shaving Spikes",
+                "tagline": "Why tokens allow sudden bursts, but leaky buckets enforce a constant drip.",
+                "hook": "Most engineers mix up Token Bucket and Leaky Bucket. Here is the physical difference in 3 steps.",
+                "why_it_works": "Clear bucket & water mental model that fits cleanly in a 10s video or 4-tier diagram."
             },
             {
-                "title": "Why UUIDv4 Primary Keys Silently Destroy Postgres B-Trees",
-                "tagline": "Random 128-bit page splits vs time-sequential UUIDv7.",
-                "hook": "We couldn't figure out why our Postgres insert throughput dropped by 80% as the table grew past 50GB.",
-                "why_it_works": "Debates deep storage engine mechanics and B-Tree cache locality."
+                "title": "Cache Stampede: The Mutex Lock Defense",
+                "tagline": "What happens when a viral key expires at 50,000 RPS (and why only 1 worker hits DB).",
+                "hook": "When our home-feed cache key expired, 8,000 requests slammed Postgres at the same millisecond.",
+                "why_it_works": "Visual 3-step gatekeeper lock that every backend developer understands."
             },
             {
-                "title": "Kafka Partition Rebalance Storms: Eager vs Cooperative Assignors",
-                "tagline": "The 45-second consumer freeze that halts entire microservice fleets.",
-                "hook": "Every time a single consumer pod restarted, all message consumption stopped completely across the cluster.",
-                "why_it_works": "Senior Kafka engineers have experienced this exact outage in production."
+                "title": "Bloom Filters: Zero-IO Database Query Check",
+                "tagline": "How 3 hash functions and a bit array tell you if data does NOT exist in 0.1ms.",
+                "hook": "How BigQuery and Cassandra know a row does not exist without a single expensive disk read.",
+                "why_it_works": "Intuitive bit array graphic with 3 arrows that makes sense in 5 seconds."
             }
         ]

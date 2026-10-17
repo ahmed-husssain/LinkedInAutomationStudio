@@ -34,15 +34,178 @@ CHANNEL_PENDING_APPROVAL = {}
 RECENT_TOPIC_IDS: deque = deque(["oauth"], maxlen=6)
 
 
+class PostRejectionRecoveryView(View):
+    """
+    Post-Rejection Feedback & Recovery Router.
+    Collects rejection reason and provides 1-tap recovery actions:
+    - 🔄 Regenerate with Alternate Hook
+    - 🎨 Switch Format / Theme
+    - 🎯 Choose Another Topic
+    - 🔥 AI Discover Bite-Sized Topics
+    """
+    def __init__(
+        self,
+        topic: Optional[Topic] = None,
+        prev_angle: str = "",
+        prev_q: str = "",
+        prev_format: str = "diagram"
+    ):
+        super().__init__(timeout=600)
+        self.topic = topic
+        self.prev_angle = prev_angle
+        self.prev_q = prev_q
+        self.prev_format = prev_format
+
+        options = [
+            discord.SelectOption(
+                label="Hook wasn't punchy / Too generic",
+                value="generic_hook",
+                emoji="🎣",
+                description="Needs a stronger engineering incident or curiosity hook"
+            ),
+            discord.SelectOption(
+                label="Visual/Diagram style didn't fit",
+                value="visual_style",
+                emoji="🎨",
+                description="Diagram or layout felt cluttered or off-brand"
+            ),
+            discord.SelectOption(
+                label="Topic was too complex / Hard to explain",
+                value="too_complex",
+                emoji="🧠",
+                description="Needs a simpler, more bite-sized mental model"
+            ),
+            discord.SelectOption(
+                label="Wrong format (wanted Video or Carousel)",
+                value="wrong_format",
+                emoji="📐",
+                description="Prefer a different visual presentation"
+            ),
+            discord.SelectOption(
+                label="Just want a fresh regeneration",
+                value="reroll",
+                emoji="🔄",
+                description="Reroll with different angles and phrasing"
+            ),
+        ]
+        select = Select(
+            placeholder="💬 What didn't satisfy you with this draft?",
+            min_values=1,
+            max_values=1,
+            options=options,
+            row=0
+        )
+        select.callback = self.feedback_callback
+        self.add_item(select)
+
+        rerun_btn = Button(label="🔄 Regenerate (New Hook)", style=discord.ButtonStyle.primary, row=1)
+        rerun_btn.callback = self.regenerate_callback
+        self.add_item(rerun_btn)
+
+        format_btn = Button(label="🎨 Switch Format", style=discord.ButtonStyle.secondary, row=1)
+        format_btn.callback = self.switch_format_callback
+        self.add_item(format_btn)
+
+        pick_btn = Button(label="🎯 Pick Another Topic", style=discord.ButtonStyle.secondary, row=2)
+        pick_btn.callback = self.pick_topic_callback
+        self.add_item(pick_btn)
+
+        ai_btn = Button(label="🔥 AI Discover Bite-Sized Topics", style=discord.ButtonStyle.green, row=2)
+        ai_btn.callback = self.ai_discover_callback
+        self.add_item(ai_btn)
+
+    def get_message_content(self) -> str:
+        topic_name = self.topic.title if self.topic else "this concept"
+        return (
+            f"🗑️ **Draft Rejected & Purged from Storage.** Zero disk footprint left.\n\n"
+            f"🎯 **Let's dial it in for '{topic_name}':**\n"
+            f"What was the main reason this didn't satisfy you, and how would you like to proceed?"
+        )
+
+    async def feedback_callback(self, interaction: discord.Interaction):
+        selected = interaction.data.get("values", [""])[0]
+        label_map = {
+            "generic_hook": "Hook wasn't punchy / Too generic",
+            "visual_style": "Visual/Diagram style didn't fit",
+            "too_complex": "Topic was too complex / Hard to explain",
+            "wrong_format": "Wrong format (wanted Video or Carousel)",
+            "reroll": "Just want a fresh regeneration",
+        }
+        reason = label_map.get(selected, "Feedback recorded")
+        await interaction.response.send_message(
+            f"📝 **Feedback Noted:** *\"{reason}\"*\n"
+            f"Tap an action below to proceed with the adjusted draft:",
+            ephemeral=True
+        )
+
+    async def regenerate_callback(self, interaction: discord.Interaction):
+        if not self.topic:
+            await interaction.response.send_message("No topic active. Please pick a topic.", ephemeral=True)
+            return
+        await interaction.response.defer()
+        next_angle = self.topic.angles[1].text if len(self.topic.angles) > 1 else self.topic.angles[0].text
+        next_q = self.topic.questions[1] if len(self.topic.questions) > 1 else self.topic.questions[0]
+        CHANNEL_PENDING_APPROVAL[interaction.channel_id] = {"path": None, "type": self.prev_format}
+        asyncio.create_task(
+            deliver_post_package(
+                channel=interaction.channel,
+                topic=self.topic,
+                angle_content=next_angle,
+                senior_question=next_q,
+                format_type=self.prev_format
+            )
+        )
+
+    async def switch_format_callback(self, interaction: discord.Interaction):
+        if not self.topic:
+            await interaction.response.send_message("No topic active.", ephemeral=True)
+            return
+        view = TopicConfiguratorView(self.topic)
+        await interaction.response.send_message(content=view.get_message_content(), view=view, ephemeral=False)
+
+    async def pick_topic_callback(self, interaction: discord.Interaction):
+        view = TopicSelectionView()
+        await interaction.response.send_message(content=view.get_message_content(), view=view, ephemeral=False)
+
+    async def ai_discover_callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        from src.agents.strategist import ContentStrategistAgent
+        strategist = ContentStrategistAgent()
+        trending = strategist.discover_trending_topics(count=3)
+        cards = [
+            f"**{i}️⃣ {t.get('title', 'Topic')}**\n• *Why it works:* {t.get('tagline', '')}\n• *Incident Hook:* \"{t.get('hook', '')}\""
+            for i, t in enumerate(trending, 1)
+        ]
+        from src.bot.views import TrendingTopicsActionView
+        action_view = TrendingTopicsActionView(trending)
+        await interaction.channel.send(
+            content=f"🔥 **Top 1% Bite-Sized Visual Architecture Topics:**\n\n" + "\n\n".join(cards) + "\n\n👉 *Tap below to generate for Topic #1 or choose format:*",
+            view=action_view
+        )
+
+
 class PostApprovalView(View):
     """
     Approval Gate View: Locks the channel until user Approves or Rejects the delivered draft.
     """
-    def __init__(self, channel_id: int, file_path: Optional[Path] = None, post_text: str = ""):
+    def __init__(
+        self,
+        channel_id: int,
+        file_path: Optional[Path] = None,
+        post_text: str = "",
+        topic: Optional[Topic] = None,
+        angle_content: str = "",
+        senior_question: str = "",
+        format_type: str = "diagram"
+    ):
         super().__init__(timeout=86400) # 24h expiration
         self.channel_id = channel_id
         self.file_path = Path(file_path) if file_path else None
         self.post_text = post_text
+        self.topic = topic
+        self.angle_content = angle_content
+        self.senior_question = senior_question
+        self.format_type = format_type
 
     @discord.ui.button(label="Approve & Post to LinkedIn", style=discord.ButtonStyle.green, emoji="🚀", row=0)
     async def approve_button(self, interaction: discord.Interaction, button: Button):
@@ -71,6 +234,22 @@ class PostApprovalView(View):
             content=interaction.message.content + "\n\n🗑️ **Draft Rejected & Discarded.** Zero disk trace left. Channel unlocked.",
             view=self
         )
+
+        # Launch Post-Rejection Recovery Flow
+        if hasattr(interaction, "channel") and interaction.channel:
+            recovery_view = PostRejectionRecoveryView(
+                topic=self.topic,
+                prev_angle=self.angle_content,
+                prev_q=self.senior_question,
+                prev_format=self.format_type
+            )
+            try:
+                await interaction.channel.send(
+                    content=recovery_view.get_message_content(),
+                    view=recovery_view
+                )
+            except Exception:
+                pass
 
     async def on_timeout(self):
         CHANNEL_PENDING_APPROVAL.pop(self.channel_id, None)
@@ -107,7 +286,15 @@ async def deliver_post_package(
             generated_path = Path(video_path)
             v_file = discord.File(str(video_path), filename=f"{file_base}Animation.mp4")
 
-            approval_view = PostApprovalView(channel_id=channel.id, file_path=generated_path, post_text=post_text)
+            approval_view = PostApprovalView(
+                channel_id=channel.id,
+                file_path=generated_path,
+                post_text=post_text,
+                topic=topic,
+                angle_content=angle_content,
+                senior_question=senior_question,
+                format_type=format_type
+            )
             CHANNEL_PENDING_APPROVAL[channel.id] = {
                 "path": generated_path,
                 "type": format_type,
@@ -168,7 +355,15 @@ async def deliver_post_package(
             generated_path = Path(pdf_path)
             pdf_file = discord.File(str(pdf_path), filename=f"{file_base}_Carousel.pdf")
 
-            approval_view = PostApprovalView(channel_id=channel.id, file_path=generated_path, post_text=post_text)
+            approval_view = PostApprovalView(
+                channel_id=channel.id,
+                file_path=generated_path,
+                post_text=post_text,
+                topic=topic,
+                angle_content=angle_content,
+                senior_question=senior_question,
+                format_type=format_type
+            )
             CHANNEL_PENDING_APPROVAL[channel.id] = {
                 "path": generated_path,
                 "type": format_type,
@@ -200,7 +395,15 @@ async def deliver_post_package(
             generated_path = Path(thumb_path)
             t_file = discord.File(str(thumb_path), filename=f"{file_base}Diagram.png")
 
-            approval_view = PostApprovalView(channel_id=channel.id, file_path=generated_path, post_text=post_text)
+            approval_view = PostApprovalView(
+                channel_id=channel.id,
+                file_path=generated_path,
+                post_text=post_text,
+                topic=topic,
+                angle_content=angle_content,
+                senior_question=senior_question,
+                format_type=format_type
+            )
             CHANNEL_PENDING_APPROVAL[channel.id] = {
                 "path": generated_path,
                 "type": format_type,

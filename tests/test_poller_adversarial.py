@@ -75,3 +75,18 @@ class TestPollerAdversarial:
 
         res_simple = match_user_intent("this is confusing, give me a simpler explanation", TOPIC_POOL[0])
         assert res_simple["intent"] == "SIMPLIFY"
+
+    def test_intent_matching_direct_format_requests(self):
+        """Conversational format requests for active topic route to GENERATE_ACTIVE_FORMAT."""
+        res_vid = match_user_intent("I want to make a video animation of that", TOPIC_POOL[0])
+        assert res_vid["intent"] == "GENERATE_ACTIVE_FORMAT"
+        assert res_vid["format"] == "video"
+
+        res_car = match_user_intent("can you make a carousel for this?", TOPIC_POOL[0])
+        assert res_car["intent"] == "GENERATE_ACTIVE_FORMAT"
+        assert res_car["format"] == "carousel"
+
+        res_diag = match_user_intent("show me the architecture diagram", TOPIC_POOL[0])
+        assert res_diag["intent"] == "GENERATE_ACTIVE_FORMAT"
+        assert res_diag["format"] == "diagram"
+

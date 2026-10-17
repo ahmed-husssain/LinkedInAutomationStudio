@@ -124,8 +124,20 @@ def match_user_intent(clean_text: str, current_topic: Topic) -> Dict:
             if topic:
                 return {"intent": "TOPIC_MATCH", "topic": topic}
 
+    # 2b. Conversational topic suggestions / discovery queries -> Route to Multi-Agent Orchestrator
+    if re.search(r"\b(trending|fresh|interesting|better|suggest\w*|ideas?|old\s*built-?in|viral|feedback|video\s*or\s*pdf|more\s*topics?)\b", lower):
+        return {"intent": "FALLBACK"}
+
+    # 2c. Direct Format Generation Request for Current Active Topic
+    if re.search(r"\b(video(\s*animation)?|animat\w*|make\s*a?\s*video|generate\s*video|create\s*video|show\s*video)\b", lower):
+        return {"intent": "GENERATE_ACTIVE_FORMAT", "format": "video"}
+    if re.search(r"\b(carousel|deck|pdf\s*carousel|slides?|make\s*a?\s*carousel|generate\s*carousel)\b", lower):
+        return {"intent": "GENERATE_ACTIVE_FORMAT", "format": "carousel"}
+    if re.search(r"\b(diagram|architecture(\s*diagram)?|2d\s*image|cover\s*diagram|make\s*diagram)\b", lower):
+        return {"intent": "GENERATE_ACTIVE_FORMAT", "format": "diagram"}
+
     # 3. Customization: Thumbnail / Cover / Theme
-    if re.search(r"\b(thumbs?|thumbnails?|covers?|themes?|images?|art|diagrams?)\b", lower):
+    if re.search(r"\b(thumbs?|thumbnails?|covers?|themes?|images?|art)\b", lower):
         return {"intent": "THUMBNAIL_OPTIONS"}
 
     # 4. Simpler Explanation
@@ -135,10 +147,6 @@ def match_user_intent(clean_text: str, current_topic: Topic) -> Dict:
     # 5. Different Question
     if re.search(r"\b(questions?|seniors?|discussions?|different\s*question)\b", lower):
         return {"intent": "DIFFERENT_QUESTIONS"}
-
-    # 6. Conversational topic suggestions / discovery queries -> Route to Multi-Agent Orchestrator
-    if re.search(r"\b(trending|fresh|interesting|better|suggest\w*|ideas?|old\s*built-?in|viral|feedback|video\s*or\s*pdf)\b", lower):
-        return {"intent": "FALLBACK"}
 
     # 7. Explicit Menu / Daily / Browse command
     if re.search(r"^(!?(start|menu|topics?|daily|help)|browse\s*topics?|show\s*topics?|list\s*topics?)$", lower.strip()):
@@ -194,7 +202,7 @@ async def dispatch_user_message(
         return
 
     # Check if channel is locked awaiting approval
-    if channel_id in CHANNEL_PENDING_APPROVAL and intent in ("TOPIC_MATCH", "BROWSE_TOPICS", "THUMBNAIL_OPTIONS", "SIMPLIFY", "DIFFERENT_QUESTIONS"):
+    if channel_id in CHANNEL_PENDING_APPROVAL and intent in ("TOPIC_MATCH", "BROWSE_TOPICS", "THUMBNAIL_OPTIONS", "SIMPLIFY", "DIFFERENT_QUESTIONS", "GENERATE_ACTIVE_FORMAT"):
         await reply_or_send(
             "⚠️ **Action Blocked:** You have a pending draft awaiting your review in this channel!\n\n"
             "👉 *Please tap **'🚀 Approve & Post'** or **'❌ Reject & Discard'** on the draft above first, or type `!unlock` to reset.*"
@@ -208,6 +216,30 @@ async def dispatch_user_message(
         await reply_or_send(
             content=f"🎯 **Found Topic:** **{matched.title}**\n\n{view.get_message_content()}",
             view=view
+        )
+
+    elif intent == "GENERATE_ACTIVE_FORMAT":
+        req_format = parsed["format"]
+        if req_format == "video" and not current_topic.has_video:
+            await reply_or_send(
+                content=(
+                    f"🎬 **Topic '{current_topic.title}' does not have a pre-rendered 60fps MP4 video.**\n\n"
+                    f"Would you like to generate the **Interactive PDF Carousel** or the **Technical Architecture Diagram**?"
+                ),
+                view=TopicConfiguratorView(current_topic)
+            )
+            return
+
+        CHANNEL_PENDING_APPROVAL[channel_id] = {"path": None, "type": req_format}
+        from src.bot.views import deliver_post_package
+        asyncio.create_task(
+            deliver_post_package(
+                channel=channel,
+                topic=current_topic,
+                angle_content=current_topic.angles[0].text,
+                senior_question=current_topic.questions[0],
+                format_type=req_format
+            )
         )
 
     elif intent == "BROWSE_TOPICS":

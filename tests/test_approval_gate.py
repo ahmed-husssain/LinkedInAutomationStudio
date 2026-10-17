@@ -138,3 +138,41 @@ def test_unlock_intent_regex():
     assert match_user_intent("!unlock", TOPIC_POOL[0])["intent"] == "UNLOCK"
     assert match_user_intent("reset", TOPIC_POOL[0])["intent"] == "UNLOCK"
     assert match_user_intent("!clear_lock", TOPIC_POOL[0])["intent"] == "UNLOCK"
+
+
+def test_post_rejection_recovery_view_actions():
+    """Verifies that rejection recovery offers feedback and 1-tap rerouting."""
+    from src.bot.views import PostRejectionRecoveryView
+
+    async def _run():
+        topic = TOPIC_POOL[0]
+        recovery = PostRejectionRecoveryView(topic=topic, prev_format="diagram")
+
+        content = recovery.get_message_content()
+        assert "Draft Rejected & Purged" in content
+        assert topic.title in content
+
+        # Test feedback callback
+        mock_interaction = MagicMock()
+        mock_interaction.data = {"values": ["generic_hook"]}
+        mock_interaction.response.send_message = AsyncMock()
+
+        await recovery.feedback_callback(mock_interaction)
+        mock_interaction.response.send_message.assert_called_once()
+        args = mock_interaction.response.send_message.call_args[0][0]
+        assert "Hook wasn't punchy" in args
+
+        # Test switch format callback
+        mock_interaction_format = MagicMock()
+        mock_interaction_format.response.send_message = AsyncMock()
+        await recovery.switch_format_callback(mock_interaction_format)
+        mock_interaction_format.response.send_message.assert_called_once()
+
+        # Test pick another topic callback
+        mock_interaction_pick = MagicMock()
+        mock_interaction_pick.response.send_message = AsyncMock()
+        await recovery.pick_topic_callback(mock_interaction_pick)
+        mock_interaction_pick.response.send_message.assert_called_once()
+
+    asyncio.run(_run())
+

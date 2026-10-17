@@ -47,7 +47,7 @@ class AgentStudioOrchestrator:
             # -----------------------------------------------------------------
             # 1. Video / Layout / Overlapping Divs Feedback
             # -----------------------------------------------------------------
-            if re.search(r"\b(overlap\w*|video|divs?|controls?|scrubber|player|cut off|collision|fix video|re-?render)\b", lower):
+            if re.search(r"\b(overlap\w*|divs?|scrubber|collision)\b", lower) or ("video" in lower and re.search(r"\b(fix|broken|overlap|cut off|re-?render)\b", lower)):
                 video_path = Path("D:/LinkedInAutomationStudio/assets/videos/QueueScene.mp4")
                 thumb_path = Path("D:/LinkedInAutomationStudio/assets/thumbnails/QueueThumbnail.png")
                 
