@@ -153,3 +153,88 @@ async def render_parameterized_animation(
         raise FileNotFoundError(f"Expected rendered video at {target_path}, but not found after compilation.")
 
     return target_path
+
+
+async def get_video_duration_async(video_path: Path) -> float:
+    """Returns video duration in seconds via ffprobe."""
+    if not video_path.exists():
+        return 0.0
+
+    cmd = [
+        "ffprobe",
+        "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        str(video_path)
+    ]
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await proc.communicate()
+        return float(stdout.decode().strip())
+    except Exception as e:
+        logger.warning(f"Failed to probe duration for {video_path}: {e}")
+        return 7.0
+
+
+async def adjust_video_pacing_async(
+    input_path: Path,
+    output_path: Path,
+    extra_seconds: float = 4.0,
+    quality: str = "high"
+) -> Path:
+    """
+    Adjusts video pacing smoothly by extending duration using FFmpeg setpts filter.
+    Preserves visual clarity and provides ample time to comprehend complex technical architectures.
+    """
+    if not input_path.exists():
+        raise FileNotFoundError(f"Source video not found: {input_path}")
+
+    if extra_seconds <= 0:
+        import shutil
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(input_path, output_path)
+        return output_path
+
+    current_dur = await get_video_duration_async(input_path)
+    if current_dur <= 0:
+        current_dur = 7.0
+
+    target_dur = current_dur + extra_seconds
+    pts_factor = target_dur / current_dur
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    crf = "18" if quality == "high" else "23"
+    preset = "slow" if quality == "high" else "fast"
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i", str(input_path),
+        "-filter:v", f"setpts={pts_factor:.3f}*PTS",
+        "-r", "30",
+        "-c:v", "libx264",
+        "-preset", preset,
+        "-crf", crf,
+        "-pix_fmt", "yuv420p",
+        str(output_path)
+    ]
+
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    _, stderr = await proc.communicate()
+
+    if proc.returncode != 0:
+        err = stderr.decode()
+        logger.error(f"FFmpeg pacing adjustment failed: {err}")
+        raise RuntimeError(f"FFmpeg pacing error: {err[:200]}")
+
+    return output_path
+
