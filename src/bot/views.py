@@ -555,38 +555,57 @@ async def deliver_post_package(
             await _update_progress(3, 3, "Complete: Draft package ready for review.")
         elif format_type == "carousel":
             await _update_progress(1, 3, f"Validating slide structure for {topic.title}...")
-            from src.agents.carousel_builder import build_pdf_carousel
-            slides_data = []
-            for idx, a in enumerate(topic.angles):
-                lines = [line.strip().lstrip("• ") for line in a.text.split("\n") if line.strip()]
+            from src.engines.storage_manager import DRAFTS_DIR
+            await _update_progress(2, 3, "Rendering specular 4-slide carousel & PDF...")
+
+            cover_path = None
+            try:
+                from src.engines.carousel_engine import generate_carousel_async
+                res = await generate_carousel_async(
+                    topic_id=f"{topic.id}_{unique_id}",
+                    title=topic.title,
+                    output_dir=DRAFTS_DIR,
+                    overwrite=True
+                )
+                pdf_path = res["pdf"]
+                cover_path = res.get("cover")
+            except Exception as exc:
+                from src.agents.carousel_builder import build_pdf_carousel
+                slides_data = []
+                for idx, a in enumerate(topic.angles):
+                    lines = [line.strip().lstrip("• ") for line in a.text.split("\n") if line.strip()]
+                    slides_data.append({
+                        "badge": f"Concept {idx+1}",
+                        "title": a.label[:32],
+                        "subtitle": a.desc[:50] if a.desc else topic.tagline[:50],
+                        "bullets": lines[:3],
+                        "accent": "#58a6ff" if idx == 0 else "#bc8cff"
+                    })
                 slides_data.append({
-                    "badge": f"Concept {idx+1}",
-                    "title": a.label[:32],
-                    "subtitle": a.desc[:50] if a.desc else topic.tagline[:50],
-                    "bullets": lines[:3],
-                    "accent": "#58a6ff" if idx == 0 else "#bc8cff"
+                    "badge": "Key Takeaway",
+                    "title": "Production Rule",
+                    "subtitle": "Engineering Best Practice",
+                    "bullets": [
+                        f"Never deploy {topic.subject or topic.title} without latency metrics.",
+                        "Enforce strict timeouts and circuit breaker patterns.",
+                        "Verify failure modes under simulated peak traffic."
+                    ],
+                    "accent": "#3fb950"
                 })
-            slides_data.append({
-                "badge": "Key Takeaway",
-                "title": "Production Rule",
-                "subtitle": "Engineering Best Practice",
-                "bullets": [
-                    f"Never deploy {topic.subject or topic.title} without latency metrics.",
-                    "Enforce strict timeouts and circuit breaker patterns.",
-                    "Verify failure modes under simulated peak traffic."
-                ],
-                "accent": "#3fb950"
-            })
-            await _update_progress(2, 3, "Compiling multi-slide PDF carousel...")
-            pdf_path = build_pdf_carousel(
-                topic_id=topic.id,
-                topic_title=topic.title,
-                slides_data=slides_data,
-                senior_question=senior_question
-            )
+                pdf_path = build_pdf_carousel(
+                    topic_id=topic.id,
+                    topic_title=topic.title,
+                    slides_data=slides_data,
+                    senior_question=senior_question
+                )
+
             await _update_progress(3, 3, "Staging carousel draft package...")
             generated_path = Path(pdf_path)
-            pdf_file = discord.File(str(pdf_path), filename=f"draft_{unique_id}_{file_base}_Carousel.pdf")
+            attached_files = [discord.File(str(pdf_path), filename=f"draft_{unique_id}_{file_base}_Carousel.pdf")]
+            if cover_path and Path(cover_path).exists():
+                attached_files.append(
+                    discord.File(str(cover_path), filename=f"draft_{unique_id}_{file_base}_Cover.png")
+                )
 
             approval_view = PostApprovalView(
                 channel_id=channel.id,
@@ -612,7 +631,7 @@ async def deliver_post_package(
                     f"**Interactive 1080x1350 PDF Carousel attached below** *(Upload as 'Document' on LinkedIn for 3x reach)*:\n\n"
                     f"**APPROVAL GATE:** Tap 'Approve' to post, or 'Reject' to discard and clean up:"
                 ),
-                file=pdf_file,
+                files=attached_files,
                 view=approval_view
             )
             await _update_progress(3, 3, "Complete: Carousel draft ready for review.")
