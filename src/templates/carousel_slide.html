@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{TITLE}} - Slide {{SLIDE_NUMBER}}</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    :root {
+      --accent: {{THEME_ACCENT}};
+      --glow: {{THEME_GLOW}};
+    }
+    body {
+      width: {{CANVAS_WIDTH}}px;
+      height: {{CANVAS_HEIGHT}}px;
+      overflow: hidden;
+      background-color: #070a12;
+      background-image:
+        radial-gradient(circle at 10% 10%, var(--glow) 0%, transparent 40%),
+        radial-gradient(circle at 90% 90%, rgba(30, 41, 59, 0.3) 0%, transparent 45%),
+        linear-gradient(to bottom, #070a12 0%, #0b0f19 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      padding: 56px;
+      justify-content: space-between;
+    }
+
+    /* Specular Glass Outer Card */
+    .card {
+      width: 100%;
+      height: 100%;
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+      border-radius: 28px;
+      background: rgba(11, 16, 28, 0.8);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), 0 0 50px var(--glow);
+      padding: 52px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    /* Header with Slide Tracker and Badge */
+    .header {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .top-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .topic-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    .slide-counter {
+      font-family: Consolas, monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.05em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Optical Typography */
+    .title {
+      font-size: 52px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      text-wrap: balance;
+    }
+    .subtitle {
+      font-size: 24px;
+      font-weight: 400;
+      color: #94a3b8;
+      line-height: 1.35;
+      letter-spacing: -0.01em;
+      text-wrap: pretty;
+    }
+
+    /* Slide Center Body Stage */
+    .stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      margin: 24px 0;
+      position: relative;
+    }
+
+    /* Structured Narrative Blocks */
+    .narrative-block {
+      background: rgba(18, 24, 38, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .narrative-block.highlight {
+      border-color: var(--accent);
+      background: rgba(18, 24, 38, 0.85);
+      box-shadow: 0 8px 30px -4px var(--glow);
+    }
+    .block-tag {
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .block-text {
+      font-size: 18px;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+
+    /* Metrics Bar Footer */
+    .footer {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 20px;
+    }
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    .metric-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .metric-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      font-weight: 700;
+    }
+    .metric-val {
+      font-family: Consolas, monospace;
+      font-size: 20px;
+      font-weight: 700;
+      color: #f8fafc;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bottom-watermark {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <!-- Header -->
+    <div class="header">
+      <div class="top-meta">
+        <div class="topic-badge">
+          <div class="badge-dot"></div>
+          <span>{{TOPIC_BADGE}}</span>
+        </div>
+        <span class="slide-counter">{{SLIDE_NUMBER}} / {{TOTAL_SLIDES}}</span>
+      </div>
+      <h1 class="title">{{TITLE}}</h1>
+      <p class="subtitle">{{SUBTITLE}}</p>
+    </div>
+
+    <!-- Center Stage Content -->
+    <div class="stage">
+      {{STAGE_HTML}}
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="metrics-row">
+        <div class="metric-card">
+          <span class="metric-label">{{METRIC_1_LABEL}}</span>
+          <span class="metric-val">{{METRIC_1_VALUE}}</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">{{METRIC_2_LABEL}}</span>
+          <span class="metric-val">{{METRIC_2_VALUE}}</span>
+        </div>
+      </div>
+      <div class="bottom-watermark">
+        <span>{{FOOTER_TEXT}}</span>
+        <span>{{SWIPE_HINT}}</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
