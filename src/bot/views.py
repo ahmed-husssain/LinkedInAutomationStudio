@@ -7,6 +7,7 @@ dynamic topic rerolling, and 1-tap post delivery.
 import random
 import secrets
 import asyncio
+import time
 import re
 from typing import List, Optional, Callable
 import discord
@@ -283,13 +284,12 @@ class AnimationConsultationView(View):
                 label=a["label"][:100],
                 value=a["id"],
                 description=a["desc"][:100],
-                emoji=a.get("emoji", "🎬"),
                 default=(a["id"] == self.selected_animation)
             )
             for a in self.data["animations"][:5]
         ]
         self.anim_select = Select(
-            placeholder="1️⃣ Select Animation / Algorithm Type",
+            placeholder="Select Animation / Algorithm Type",
             options=anim_options,
             row=0
         )
@@ -302,13 +302,12 @@ class AnimationConsultationView(View):
                 label=i["label"][:100],
                 value=i["id"],
                 description=i["desc"][:100],
-                emoji=i.get("emoji", "⚠️"),
                 default=(i["id"] == self.selected_issue)
             )
             for i in self.data["issues"][:5]
         ]
         self.issue_select = Select(
-            placeholder="2️⃣ Select Production Issue / Bottleneck",
+            placeholder="Select Production Issue / Bottleneck",
             options=issue_options,
             row=1
         )
@@ -317,22 +316,22 @@ class AnimationConsultationView(View):
 
     def get_message_content(self) -> str:
         anim_bullets = "\n".join(
-            f"• {a.get('emoji', '🎬')} **{a['label']}:** {a['desc']}"
+            f"• **{a['label']}:** {a['desc']}"
             for a in self.data["animations"]
         )
         issue_bullets = "\n".join(
-            f"• {i.get('emoji', '⚠️')} **{i['label']}:** {i['desc']}"
+            f"• **{i['label']}:** {i['desc']}"
             for i in self.data["issues"]
         )
 
         return (
-            f"🎬 **Animation Studio Consultation: {self.data.get('title', self.topic.title)}**\n\n"
-            f"Before generating your video animation and LinkedIn post, let's clarify your exact focus:\n\n"
-            f"**1️⃣ What type of animation / algorithm mechanism do you want to show?**\n"
+            f"**Animation Studio Consultation: {self.data.get('title', self.topic.title)}**\n\n"
+            f"Before generating your video animation and LinkedIn post, select your parameters:\n\n"
+            f"**1. What type of animation / algorithm mechanism do you want to show?**\n"
             f"{anim_bullets}\n\n"
-            f"**2️⃣ What production issue or bottleneck are you facing?**\n"
+            f"**2. What production issue or bottleneck are you facing?**\n"
             f"{issue_bullets}\n\n"
-            f"👉 **Choose from the menus below or reply directly in chat with your custom setup!**"
+            f"Choose from the menus below or reply directly in chat with your custom setup."
         )
 
     async def on_select_animation(self, interaction: discord.Interaction):
@@ -355,7 +354,7 @@ class AnimationConsultationView(View):
         except Exception:
             pass
 
-    @discord.ui.button(label="Generate Post & Video", style=discord.ButtonStyle.primary, emoji="🎬", row=2)
+    @discord.ui.button(label="Generate Post & Video", style=discord.ButtonStyle.primary, row=2)
     async def generate_video_button(self, interaction: discord.Interaction, button: Button):
         issue_obj = next((i for i in self.data["issues"] if i["id"] == self.selected_issue), self.data["issues"][0])
         anim_obj = next((a for a in self.data["animations"] if a["id"] == self.selected_animation), self.data["animations"][0])
@@ -367,9 +366,14 @@ class AnimationConsultationView(View):
         for child in self.children:
             child.disabled = True
 
+        status_text = (
+            f"[{anim_obj['label']} | {issue_obj['label']}]\n"
+            f"[1/3] Validating parameters and consultation inputs..."
+        )
+
         try:
             await interaction.response.edit_message(
-                content=interaction.message.content + f"\n\n⚙️ **Generating tailored package for:** `{anim_obj['label']}` dealing with `{issue_obj['label']}`...",
+                content=status_text,
                 view=self
             )
         except Exception:
@@ -386,10 +390,11 @@ class AnimationConsultationView(View):
                 senior_question=senior_q,
                 format_type="video",
                 custom_hook=custom_hook,
-                animation_id=self.selected_animation
+                animation_id=self.selected_animation,
+                progress_msg=interaction.message
             )
 
-    @discord.ui.button(label="Generate Carousel Instead", style=discord.ButtonStyle.secondary, emoji="📑", row=2)
+    @discord.ui.button(label="Generate Carousel Instead", style=discord.ButtonStyle.secondary, row=2)
     async def generate_carousel_button(self, interaction: discord.Interaction, button: Button):
         issue_obj = next((i for i in self.data["issues"] if i["id"] == self.selected_issue), self.data["issues"][0])
         anim_obj = next((a for a in self.data["animations"] if a["id"] == self.selected_animation), self.data["animations"][0])
@@ -401,9 +406,14 @@ class AnimationConsultationView(View):
         for child in self.children:
             child.disabled = True
 
+        status_text = (
+            f"[{anim_obj['label']} | {issue_obj['label']}]\n"
+            f"[1/3] Validating parameters and slide structure..."
+        )
+
         try:
             await interaction.response.edit_message(
-                content=interaction.message.content + f"\n\n📑 **Generating tailored Carousel for:** `{anim_obj['label']}` dealing with `{issue_obj['label']}`...",
+                content=status_text,
                 view=self
             )
         except Exception:
@@ -419,16 +429,17 @@ class AnimationConsultationView(View):
                 angle_content=angle_content,
                 senior_question=senior_q,
                 format_type="carousel",
-                custom_hook=custom_hook
+                custom_hook=custom_hook,
+                progress_msg=interaction.message
             )
 
-    @discord.ui.button(label="Custom Issue (Chat)", style=discord.ButtonStyle.secondary, emoji="✍️", row=2)
+    @discord.ui.button(label="Custom Issue (Chat)", style=discord.ButtonStyle.secondary, row=2)
     async def custom_issue_button(self, interaction: discord.Interaction, button: Button):
         try:
             await interaction.response.send_message(
-                "✍️ **Tell me your specific setup or issue in chat:**\n"
-                "(e.g. *\"Our payment gateway gets flooded when 5,000 users checkout at once and Redis Lua locks up\"*)\n\n"
-                "I'll craft the hook, architecture breakdown, and animation tailored to your exact production bottleneck!",
+                "Tell me your specific setup or issue in chat:\n"
+                "(e.g. \"Our payment gateway gets flooded when 5,000 users checkout at once and Redis Lua locks up\")\n\n"
+                "I will generate the technical post and animation tailored to your bottleneck.",
                 ephemeral=True
             )
         except Exception:
@@ -442,12 +453,20 @@ async def deliver_post_package(
     senior_question: str,
     format_type: str = "video",
     custom_hook: Optional[str] = None,
-    animation_id: Optional[str] = None
+    animation_id: Optional[str] = None,
+    progress_msg: Optional[discord.Message] = None
 ):
     """
     Renders and sends the complete LinkedIn package to the Discord channel
-    within 2 seconds: formatted post copy, playable video, and custom 1080x1080 thumbnail.
+    with synchronized step updates and unique cache-busting filenames.
     """
+    async def _update_progress(step: int, total: int, text: str):
+        if progress_msg:
+            try:
+                await progress_msg.edit(content=f"[{step}/{total}] {text}")
+            except Exception:
+                pass
+
     post_text = format_linkedin_post(
         topic_title=topic.title,
         subject=topic.subject or topic.title,
@@ -457,12 +476,12 @@ async def deliver_post_package(
     )
 
     file_base = topic.id.replace("_", " ").title().replace(" ", "")
-
+    unique_id = int(time.time())
     generated_path: Optional[Path] = None
 
     try:
-        # Video delivery: dynamically resolves exact algorithm animation via Video Engine
         if format_type == "video":
+            await _update_progress(1, 3, f"Validating parameters for {topic.title}...")
             from src.engines.video_engine import resolve_video_path
 
             video_path = None
@@ -483,15 +502,18 @@ async def deliver_post_package(
 
             if not video_path or not video_path.exists():
                 CHANNEL_PENDING_APPROVAL.pop(channel.id, None)
+                await _update_progress(2, 3, f"[ERROR] Animation asset for {animation_id or topic.title} could not be resolved.")
                 await channel.send(
-                    f"⚠️ **Video Generation Error:** Animation asset for `{animation_id or topic.title}` could not be resolved.\n"
-                    f"👉 *No silent fallback was served to protect technical accuracy.*"
+                    f"**Video Generation Error:** Animation asset for `{animation_id or topic.title}` could not be resolved.\n"
+                    f"*No silent fallback was served to protect technical accuracy.*"
                 )
                 return
 
+            await _update_progress(2, 3, f"Compiling video animation asset ({chosen_filename})...")
             generated_path = Path(video_path)
-            v_file = discord.File(str(video_path), filename=chosen_filename or f"{file_base}Animation.mp4")
+            v_file = discord.File(str(video_path), filename=f"draft_{unique_id}_{chosen_filename}")
 
+            await _update_progress(3, 3, "Staging LinkedIn draft package and thumbnail...")
 
             approval_view = PostApprovalView(
                 channel_id=channel.id,
@@ -510,13 +532,13 @@ async def deliver_post_package(
 
             await channel.send(
                 content=(
-                    f"🎉 **YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
+                    f"**YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
                     f"────────────────────────────────────────\n"
                     f"{post_text}\n"
                     f"────────────────────────────────────────\n"
-                    f"👉 *1. Copy post copy above*\n"
-                    f"👉 *2. Video player attached below:*\n\n"
-                    f"⚖️ **APPROVAL GATE:** Tap '🚀 Approve' to post, or '❌ Reject' to discard and clean up:"
+                    f"1. Copy post copy above\n"
+                    f"2. Video player attached below:\n\n"
+                    f"**APPROVAL GATE:** Tap 'Approve' to post, or 'Reject' to discard and clean up:"
                 ),
                 file=v_file,
                 view=approval_view
@@ -525,12 +547,14 @@ async def deliver_post_package(
             # Standalone thumbnail
             thumb_path = topic.thumb_path or generate_technical_diagram(topic.id, topic.title, topic.tagline)
             if thumb_path and thumb_path.exists():
-                t_file = discord.File(str(thumb_path), filename=f"{file_base}Thumbnail.png")
+                t_file = discord.File(str(thumb_path), filename=f"thumb_{unique_id}_{file_base}.png")
                 await channel.send(
-                    content="🖼️ **Custom 1080x1080 Video Thumbnail** *(Save to camera roll to use as cover on LinkedIn)*:",
+                    content="**Custom 1080x1080 Video Thumbnail** *(Save to use as cover on LinkedIn)*:",
                     file=t_file
                 )
+            await _update_progress(3, 3, "Complete: Draft package ready for review.")
         elif format_type == "carousel":
+            await _update_progress(1, 3, f"Validating slide structure for {topic.title}...")
             from src.agents.carousel_builder import build_pdf_carousel
             slides_data = []
             for idx, a in enumerate(topic.angles):
@@ -553,14 +577,16 @@ async def deliver_post_package(
                 ],
                 "accent": "#3fb950"
             })
+            await _update_progress(2, 3, "Compiling multi-slide PDF carousel...")
             pdf_path = build_pdf_carousel(
                 topic_id=topic.id,
                 topic_title=topic.title,
                 slides_data=slides_data,
                 senior_question=senior_question
             )
+            await _update_progress(3, 3, "Staging carousel draft package...")
             generated_path = Path(pdf_path)
-            pdf_file = discord.File(str(pdf_path), filename=f"{file_base}_Carousel.pdf")
+            pdf_file = discord.File(str(pdf_path), filename=f"draft_{unique_id}_{file_base}_Carousel.pdf")
 
             approval_view = PostApprovalView(
                 channel_id=channel.id,
@@ -579,19 +605,22 @@ async def deliver_post_package(
 
             await channel.send(
                 content=(
-                    f"🎉 **YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
+                    f"**YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
                     f"────────────────────────────────────────\n"
                     f"{post_text}\n"
                     f"────────────────────────────────────────\n"
-                    f"📑 **Interactive 1080x1350 PDF Carousel attached below** *(Upload as 'Document' on LinkedIn for 3x reach)*:\n\n"
-                    f"⚖️ **APPROVAL GATE:** Tap '🚀 Approve' to post, or '❌ Reject' to discard and clean up:"
+                    f"**Interactive 1080x1350 PDF Carousel attached below** *(Upload as 'Document' on LinkedIn for 3x reach)*:\n\n"
+                    f"**APPROVAL GATE:** Tap 'Approve' to post, or 'Reject' to discard and clean up:"
                 ),
                 file=pdf_file,
                 view=approval_view
             )
+            await _update_progress(3, 3, "Complete: Carousel draft ready for review.")
         else:
             # Technical architecture diagram delivery
+            await _update_progress(1, 3, f"Validating diagram parameters for {topic.title}...")
             from src.engines.storage_manager import DRAFTS_DIR
+            await _update_progress(2, 3, "Rendering high-fidelity architecture diagram...")
             thumb_path = await generate_technical_diagram_async(
                 topic.id,
                 topic.title,
@@ -599,8 +628,9 @@ async def deliver_post_package(
                 output_dir=DRAFTS_DIR,
                 overwrite=True
             )
+            await _update_progress(3, 3, "Staging diagram draft package...")
             generated_path = Path(thumb_path)
-            t_file = discord.File(str(thumb_path), filename=f"{file_base}Diagram.png")
+            t_file = discord.File(str(thumb_path), filename=f"draft_{unique_id}_{file_base}_Diagram.png")
 
             approval_view = PostApprovalView(
                 channel_id=channel.id,
@@ -619,19 +649,21 @@ async def deliver_post_package(
 
             await channel.send(
                 content=(
-                    f"🎉 **YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
+                    f"**YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
                     f"────────────────────────────────────────\n"
                     f"{post_text}\n"
                     f"────────────────────────────────────────\n"
-                    f"👉 *Technical diagram attached below:*\n\n"
-                    f"⚖️ **APPROVAL GATE:** Tap '🚀 Approve' to post, or '❌ Reject' to discard and clean up:"
+                    f"Technical diagram attached below:\n\n"
+                    f"**APPROVAL GATE:** Tap 'Approve' to post, or 'Reject' to discard and clean up:"
                 ),
                 file=t_file,
                 view=approval_view
             )
+            await _update_progress(3, 3, "Complete: Diagram draft ready for review.")
     except Exception as e:
         CHANNEL_PENDING_APPROVAL.pop(channel.id, None)
-        await channel.send(f"❌ **Generation Error:** {e}. Channel lock released.")
+        await _update_progress(1, 3, f"[ERROR] Generation failed: {e}")
+        await channel.send(f"**Generation Error:** {e}. Channel lock released.")
         raise
 
 

@@ -291,6 +291,47 @@ def test_dynamic_video_resolution_for_all_rate_limiter_algorithms():
     asyncio.run(_run())
 
 
+def test_synchronized_delivery_progress_and_cache_busting():
+    """Verifies real synchronized progress updates on progress_msg and unique cache-busting filenames."""
+    from src.bot.views import deliver_post_package, CHANNEL_PENDING_APPROVAL
+
+    async def _run():
+        rate_topic = next(t for t in TOPIC_POOL if t.id == "rate_limiter")
+        mock_channel = AsyncMock()
+        mock_channel.id = 777002
+
+        mock_progress_msg = AsyncMock()
+        mock_progress_msg.edit = AsyncMock()
+
+        CHANNEL_PENDING_APPROVAL.pop(mock_channel.id, None)
+        await deliver_post_package(
+            channel=mock_channel,
+            topic=rate_topic,
+            angle_content="Sliding Window test angle",
+            senior_question="Test Q",
+            format_type="video",
+            animation_id="sliding_window",
+            progress_msg=mock_progress_msg
+        )
+
+        # 1. progress_msg must have been edited across real lifecycle stages
+        assert mock_progress_msg.edit.call_count >= 3
+        edit_contents = [call.kwargs.get("content", "") for call in mock_progress_msg.edit.call_args_list]
+
+        # 2. Check strict stage formatting: [1/3], [2/3], [3/3]
+        assert any("[1/3]" in c for c in edit_contents)
+        assert any("[2/3]" in c for c in edit_contents)
+        assert any("[3/3]" in c for c in edit_contents)
+
+        # 3. Check cache-busting filename
+        video_call_file = mock_channel.send.call_args_list[0][1]["file"]
+        assert video_call_file.filename.startswith("draft_")
+        assert "SlidingWindowScene.mp4" in video_call_file.filename
+
+    asyncio.run(_run())
+
+
+
 
 
 
