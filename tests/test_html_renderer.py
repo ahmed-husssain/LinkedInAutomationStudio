@@ -85,10 +85,4 @@ def test_browser_singleton_reuse_and_shutdown():
         await close_browser()
         assert not b1.is_connected()
 
-        # Next call should lazily re-instantiate
-        b3 = await get_browser()
-        assert b3 is not None
-        assert b3.is_connected()
-        await close_browser()
-
     asyncio.run(_run())

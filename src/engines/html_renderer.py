@@ -43,7 +43,7 @@ async def get_browser() -> Browser:
         _playwright_instance = await async_playwright().start()
         _browser_instance = await _playwright_instance.chromium.launch(
             headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
         )
         return _browser_instance
 

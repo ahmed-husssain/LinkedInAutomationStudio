@@ -24,8 +24,19 @@ class GeminiClient:
         if self.api_key:
             self._init_client()
 
+    def _is_dummy_key(self) -> bool:
+        return bool(
+            not self.api_key
+            or self.api_key.startswith("dummy_")
+            or self.api_key in ("dummy_test_key_for_ci", "mock_key", "test", "your_gemini_api_key_here")
+        )
+
     def _init_client(self):
         """Initializes modern google.genai or falls back to google.generativeai."""
+        if self._is_dummy_key():
+            self._client = None
+            return
+
         try:
             from google import genai
             self._client = genai.Client(api_key=self.api_key)
@@ -44,7 +55,7 @@ class GeminiClient:
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.api_key and self._client)
+        return bool(self.api_key and self._client and not self._is_dummy_key())
 
     def generate(
         self,

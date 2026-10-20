@@ -120,7 +120,15 @@ def test_trending_topics_discovery_routing():
         orchestrator = AgentStudioOrchestrator()
         msg = DummyMessage("suggest some more interesting topics instead of old built-in ones")
 
-        await orchestrator.handle_conversational_request(msg, msg.content)
+        mock_topics = [
+            {
+                "title": "Cache Stampede Mutex",
+                "tagline": "Dogpiling prevention at 100k req/s",
+                "hook": "When our Redis cache expired, 50,000 threads hit PostgreSQL at the same millisecond."
+            }
+        ]
+        with patch.object(orchestrator.strategist, "discover_trending_topics", return_value=mock_topics):
+            await orchestrator.handle_conversational_request(msg, msg.content)
 
         msg.reply.assert_called_once()
         call_kwargs = msg.reply.call_args.kwargs
