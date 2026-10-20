@@ -37,5 +37,7 @@ from src.design_system.primitives import (
     render_partitioned_queue,
     render_gateway_shield,
     render_directional_flow,
+    render_full_width_topology,
+    render_sequence_flow_svg,
 )
 

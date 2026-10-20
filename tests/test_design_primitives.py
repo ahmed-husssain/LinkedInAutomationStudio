@@ -84,3 +84,41 @@ def test_render_directional_flow():
     assert "marker-end=" in svg
     assert "gRPC / Protobuf" in svg
     assert 'stroke-dasharray="6 4"' in svg  # Animated velocity flow
+
+
+def test_render_full_width_topology():
+    """Verifies edge-to-edge 880px distributed architecture topology."""
+    from src.design_system.primitives import render_full_width_topology
+    svg = render_full_width_topology(
+        width=880,
+        height=240,
+        ingress_label="HAProxy L4",
+        ingress_metric="1M rps",
+        worker_label="Epoll Edge",
+        worker_metric="10M Conns",
+        queue_label="Kafka Bus",
+        queue_metric="64 Partitions",
+        store_label="Distributed Raft",
+        store_metric="p99 2.1ms",
+        accent="#38bdf8"
+    )
+    assert '<svg width="880" height="240"' in svg
+    assert "HAProxy L4" in svg
+    assert "Epoll Edge" in svg
+    assert "Kafka Bus" in svg
+    assert "Distributed Raft" in svg
+    assert "p99 2.1ms" in svg
+    assert 'filter="url(#topo-glow)"' in svg
+
+
+def test_render_sequence_flow_svg():
+    """Verifies horizontal temporal sequence flow SVG."""
+    from src.design_system.primitives import render_sequence_flow_svg
+    steps = ["TCP SYN", "HTTP 101 Upgrade", "Epoll Register", "Pub/Sub Broadcast", "ACK Frame"]
+    svg = render_sequence_flow_svg(steps=steps, width=880, height=80, accent="#38bdf8")
+    assert '<svg width="880" height="80"' in svg
+    assert "01" in svg
+    assert "05" in svg
+    assert "TCP SYN" in svg
+    assert "ACK Frame" in svg
+

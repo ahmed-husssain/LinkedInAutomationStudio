@@ -212,3 +212,118 @@ def render_directional_flow(
 """
     svg += "</g>"
     return svg
+
+
+def render_full_width_topology(
+    width: int = 880,
+    height: int = 240,
+    ingress_label: str = "L4 Proxy",
+    ingress_metric: str = "500k rps",
+    worker_label: str = "Epoll Cluster",
+    worker_metric: str = "10M Sockets",
+    queue_label: str = "Event Stream",
+    queue_metric: str = "32 Partitions",
+    store_label: str = "Raft Store",
+    store_metric: str = "p99 3.2ms",
+    accent: str = "#38bdf8",
+) -> str:
+    """
+    Renders an edge-to-edge full-width SVG architecture diagram (880x240)
+    filling the stage gracefully with 4 distributed tiers and directional data flows.
+    """
+    card_w = 160
+    card_h = 170
+    gap = (width - 4 * card_w) // 3
+    y_card = (height - card_h) // 2
+
+    tiers = [
+        {"x": 0, "name": ingress_label, "metric": ingress_metric, "tag": "EDGE INGRESS", "icon": "shield"},
+        {"x": card_w + gap, "name": worker_label, "metric": worker_metric, "tag": "STATELESS TIER", "icon": "cpu"},
+        {"x": 2 * (card_w + gap), "name": queue_label, "metric": queue_metric, "tag": "PARTITION BUFFER", "icon": "stream"},
+        {"x": 3 * (card_w + gap), "name": store_label, "metric": store_metric, "tag": "CONSENSUS STORE", "icon": "db"},
+    ]
+
+    svg = f"""<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" fill="none" class="full-topology-svg">
+  <defs>
+    <filter id="topo-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="{accent}" flood-opacity="0.18" />
+    </filter>
+  </defs>
+"""
+    # Draw connectors between consecutive tiers
+    for i in range(3):
+        x1 = tiers[i]["x"] + card_w
+        y1 = y_card + card_h // 2
+        x2 = tiers[i+1]["x"]
+        y2 = y1
+        mx = (x1 + x2) // 2
+        svg += f"""  <line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{accent}" stroke-width="2" stroke-dasharray="6 4" />
+  <circle cx="{mx}" cy="{y1}" r="3" fill="{accent}" />
+"""
+
+    # Draw the 4 tier cards
+    for t in tiers:
+        tx = t["x"]
+        svg += f"""  <!-- Tier: {t['name']} -->
+  <g transform="translate({tx}, {y_card})" filter="url(#topo-glow)">
+    <!-- Specular Glass Card -->
+    <rect width="{card_w}" height="{card_h}" rx="16" fill="rgba(15, 23, 42, 0.88)" 
+          stroke="rgba(255, 255, 255, 0.12)" stroke-width="1.5" />
+    <line x1="16" y1="1" x2="{card_w - 16}" y2="1" stroke="rgba(255, 255, 255, 0.25)" stroke-width="1" />
+    
+    <!-- Tier Tag Pill -->
+    <rect x="12" y="14" width="{card_w - 24}" height="18" rx="9" fill="rgba(255, 255, 255, 0.04)" stroke="{accent}" stroke-opacity="0.3" stroke-width="1" />
+    <text x="{card_w // 2}" y="26" text-anchor="middle" fill="{accent}" font-family="Consolas, monospace" font-size="9" font-weight="700" letter-spacing="0.06em">
+      {t['tag']}
+    </text>
+
+    <!-- Node Title -->
+    <text x="{card_w // 2}" y="76" text-anchor="middle" fill="#ffffff" font-family="-apple-system, sans-serif" font-size="14" font-weight="700" letter-spacing="-0.02em">
+      {t['name']}
+    </text>
+
+    <!-- Tabular Metric Badge -->
+    <g transform="translate(16, {card_h - 44})">
+      <rect width="{card_w - 32}" height="26" rx="13" fill="rgba(0, 0, 0, 0.6)" stroke="{accent}" stroke-opacity="0.5" stroke-width="1" />
+      <text x="{(card_w - 32) // 2}" y="17" text-anchor="middle" fill="#f8fafc" font-family="Consolas, monospace" font-size="11" font-weight="700" font-variant-numeric="tabular-nums">
+        {t['metric']}
+      </text>
+    </g>
+  </g>
+"""
+    svg += "</svg>"
+    return svg
+
+
+def render_sequence_flow_svg(
+    steps: List[str],
+    width: int = 880,
+    height: int = 80,
+    accent: str = "#38bdf8",
+) -> str:
+    """
+    Renders a full-width horizontal sequence timeline showing temporal causality:
+    Step 1 -> Step 2 -> Step 3 -> Step 4 -> Step 5.
+    """
+    n = len(steps)
+    if n == 0:
+        return ""
+    step_w = (width - (n - 1) * 24) // n
+    svg = f"""<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" fill="none" class="sequence-flow-svg">
+"""
+    for i, label in enumerate(steps):
+        sx = i * (step_w + 24)
+        svg += f"""  <g transform="translate({sx}, 10)">
+    <rect width="{step_w}" height="60" rx="12" fill="rgba(18, 24, 38, 0.75)" stroke="{accent}" stroke-opacity="0.35" stroke-width="1" />
+    <text x="12" y="22" fill="{accent}" font-family="Consolas, monospace" font-size="10" font-weight="700">0{i+1}</text>
+    <text x="12" y="44" fill="#f1f5f9" font-family="-apple-system, sans-serif" font-size="12" font-weight="600">{label}</text>
+  </g>
+"""
+        if i < n - 1:
+            ax = sx + step_w + 4
+            ay = 40
+            svg += f"""  <path d="M {ax} {ay} L {ax + 14} {ay} M {ax + 9} {ay - 4} L {ax + 14} {ay} L {ax + 9} {ay + 4}" stroke="{accent}" stroke-width="1.5" />
+"""
+    svg += "</svg>"
+    return svg
+
