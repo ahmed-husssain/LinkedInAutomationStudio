@@ -78,3 +78,50 @@ def test_generate_css_tokens():
     assert ".scenic-glass" in css
     assert ".scenic-tabular" in css
     assert "font-variant-numeric: tabular-nums;" in css
+
+
+def test_adaptive_diagram_rendering_aspect_ratios(tmp_path):
+    """Verifies that diagram engine dynamically adapts image dimensions to topology aspect ratios."""
+    import asyncio
+    from PIL import Image
+    from src.engines.diagram_engine import generate_technical_diagram_async
+
+    async def _run():
+        # 1. Landscape 16:9 for streaming/pipeline topologies
+        out_landscape = await generate_technical_diagram_async(
+            topic_id="kafka_pipeline",
+            title="Kafka Distributed Stream",
+            output_dir=tmp_path,
+            aspect_ratio="landscape",
+            overwrite=True
+        )
+        assert out_landscape.exists()
+        with Image.open(out_landscape) as img:
+            assert img.size == (1920, 1080)
+
+        # 2. Portrait 4:5 for vertical step narratives
+        out_portrait = await generate_technical_diagram_async(
+            topic_id="postgres_incident",
+            title="Postgres Lock Contention",
+            output_dir=tmp_path,
+            aspect_ratio="portrait",
+            overwrite=True
+        )
+        assert out_portrait.exists()
+        with Image.open(out_portrait) as img:
+            assert img.size == (1080, 1350)
+
+        # 3. Square 1:1 for cyclic state loops
+        out_square = await generate_technical_diagram_async(
+            topic_id="token_bucket",
+            title="Token Bucket Limiter",
+            output_dir=tmp_path,
+            aspect_ratio="square",
+            overwrite=True
+        )
+        assert out_square.exists()
+        with Image.open(out_square) as img:
+            assert img.size == (1080, 1080)
+
+    asyncio.run(_run())
+

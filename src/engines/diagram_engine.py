@@ -79,8 +79,15 @@ def _load_html_template() -> str:
     raise FileNotFoundError(f"Template not found at {TEMPLATE_PATH}")
 
 
-def _build_html_markup(topic_id: str, title: str, tagline: str, theme: str) -> str:
-    """Substitutes theme variables and topic text into the HTML template."""
+def _build_html_markup(
+    topic_id: str,
+    title: str,
+    tagline: str,
+    theme: str,
+    width: int = CANVAS_WIDTH,
+    height: int = CANVAS_HEIGHT
+) -> str:
+    """Substitutes theme variables, dimensions, and topic text into the HTML template."""
     raw_template = _load_html_template()
     theme_data = THEMES.get(theme.lower(), THEMES["cyan"])
     accent = theme_data["accent"]
@@ -119,6 +126,8 @@ def _build_html_markup(topic_id: str, title: str, tagline: str, theme: str) -> s
 
     rendered = raw_template
     replacements = {
+        "{{CANVAS_WIDTH}}": str(width),
+        "{{CANVAS_HEIGHT}}": str(height),
         "{{THEME_ACCENT}}": accent,
         "{{THEME_GLOW}}": glow,
         "{{BADGE_TEXT}}": "SYSTEM DESIGN ARCHITECTURE",
@@ -145,26 +154,42 @@ async def generate_technical_diagram_async(
     tagline: str = "",
     theme: str = "cyan",
     output_dir: Optional[Path] = None,
-    overwrite: bool = False
+    overwrite: bool = False,
+    aspect_ratio: Optional[str] = None
 ) -> Path:
     """
-    Renders a high-res architecture diagram via headless Chromium HTML template.
+    Renders an adaptive architecture diagram via headless Chromium HTML template.
+    Content-topology driven aspect ratio: landscape (16:9), portrait (4:5), or square (1:1).
     Falls back to Pillow if Playwright fails.
     """
+    from src.design_system.tokens import resolve_topology_aspect_ratio, CANVAS_ASPECT_RATIOS
+
+    # ponytail: default to square unless caller or detected topology specifies landscape/portrait
+    ratio_key = aspect_ratio
+    if not ratio_key:
+        detected = resolve_topology_aspect_ratio([topic_id], title=title)
+        # For single diagrams, preserve square unless it's an explicit pipeline/stream topology
+        ratio_key = detected if detected in ("landscape", "square") else "square"
+
+    canvas_spec = CANVAS_ASPECT_RATIOS.get(ratio_key, CANVAS_ASPECT_RATIOS["square"])
+    width = canvas_spec["width"]
+    height = canvas_spec["height"]
+
     target_dir = output_dir or THUMBNAILS_DIR
     target_dir.mkdir(parents=True, exist_ok=True)
-    out_file = target_dir / f"{topic_id}_Diagram_{theme}.png"
+    suffix = f"_{ratio_key}" if ratio_key != "square" else ""
+    out_file = target_dir / f"{topic_id}_Diagram_{theme}{suffix}.png"
 
     if out_file.exists() and not overwrite:
         return out_file
 
     try:
         from src.engines.html_renderer import render_html_to_image
-        html_markup = _build_html_markup(topic_id, title, tagline, theme)
+        html_markup = _build_html_markup(topic_id, title, tagline, theme, width=width, height=height)
         png_bytes = await render_html_to_image(
             html_markup,
-            width=CANVAS_WIDTH,
-            height=CANVAS_HEIGHT,
+            width=width,
+            height=height,
             timeout_ms=6000
         )
         out_file.write_bytes(png_bytes)
@@ -173,7 +198,10 @@ async def generate_technical_diagram_async(
         logger.warning(
             f"HTML diagram render failed for '{topic_id}' ({exc}). Falling back to Pillow engine."
         )
-        return _generate_diagram_pillow(topic_id, title, tagline, theme, output_dir, overwrite)
+        return _generate_diagram_pillow(
+            topic_id, title, tagline, theme, output_dir, overwrite,
+            width=width, height=height, out_file=out_file
+        )
 
 
 def _generate_diagram_pillow(
@@ -182,7 +210,10 @@ def _generate_diagram_pillow(
     tagline: str = "",
     theme: str = "cyan",
     output_dir: Optional[Path] = None,
-    overwrite: bool = False
+    overwrite: bool = False,
+    width: int = CANVAS_WIDTH,
+    height: int = CANVAS_HEIGHT,
+    out_file: Optional[Path] = None
 ) -> Path:
     """Pillow fallback generator: guarantees 100% resilient rendering even without browser."""
     target_dir = output_dir or THUMBNAILS_DIR
@@ -191,11 +222,11 @@ def _generate_diagram_pillow(
     theme_data = THEMES.get(theme.lower(), THEMES["cyan"])
     accent_color = theme_data["accent"]
 
-    out_file = target_dir / f"{topic_id}_Diagram_{theme}.png"
+    if out_file is None:
+        out_file = target_dir / f"{topic_id}_Diagram_{theme}.png"
     if out_file.exists() and not overwrite:
         return out_file
 
-    width, height = CANVAS_WIDTH, CANVAS_HEIGHT
     img = Image.new("RGB", (width, height), color="#0d1117")
     draw = ImageDraw.Draw(img)
 
@@ -282,7 +313,8 @@ def generate_technical_diagram(
     tagline: str = "",
     theme: str = "cyan",
     output_dir: Optional[Path] = None,
-    overwrite: bool = False
+    overwrite: bool = False,
+    aspect_ratio: Optional[str] = None
 ) -> Path:
     """
     Synchronous entrypoint for technical diagram generation.
@@ -296,15 +328,16 @@ def generate_technical_diagram(
 
         if loop is None:
             return asyncio.run(generate_technical_diagram_async(
-                topic_id, title, tagline, theme, output_dir, overwrite
+                topic_id, title, tagline, theme, output_dir, overwrite, aspect_ratio=aspect_ratio
             ))
         else:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 return pool.submit(
                     lambda: asyncio.run(generate_technical_diagram_async(
-                        topic_id, title, tagline, theme, output_dir, overwrite
+                        topic_id, title, tagline, theme, output_dir, overwrite, aspect_ratio=aspect_ratio
                     ))
                 ).result(timeout=10)
     except Exception as exc:
         logger.warning(f"Synchronous HTML diagram render fallback triggered: {exc}")
         return _generate_diagram_pillow(topic_id, title, tagline, theme, output_dir, overwrite)
+
