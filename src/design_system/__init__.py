@@ -22,7 +22,13 @@ from src.design_system.rules import (
     MANIM_MIN_ELEMENT_GAP,
     PDF_WIDTH,
     PDF_HEIGHT,
-    PDF_GUTTER_X,
     BoundingBox2D,
     wrap_text_cleanly
+)
+from src.design_system.tokens import (
+    TYPOGRAPHY_TOKENS,
+    CANVAS_ASPECT_RATIOS,
+    LUMINANCE_RAMPS,
+    resolve_topology_aspect_ratio,
+    generate_css_tokens
 )
