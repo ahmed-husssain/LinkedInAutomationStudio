@@ -32,3 +32,10 @@ from src.design_system.tokens import (
     resolve_topology_aspect_ratio,
     generate_css_tokens
 )
+from src.design_system.primitives import (
+    render_database_cylinder,
+    render_partitioned_queue,
+    render_gateway_shield,
+    render_directional_flow,
+)
+
