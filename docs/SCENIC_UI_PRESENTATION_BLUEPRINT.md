@@ -1,220 +1,166 @@
-# 🌟 Scenic UI & Presentation Layer Blueprint
-### "Spreading Sunshine Through Engineering Artistry"
+# 🌟 Adaptive Scenic Presentation System Blueprint
+### Grounded in Apple Design Engineering & Cognitive Visual Psychology
+*(Inspired by Emil Kowalski's Apple Design Foundations & Matt Pocock's Deep System Architecture)*
 
 ---
 
-## 1. Executive Vision & Philosophy
+## 1. The Core Paradigm Shift
 
-### 1.1 The Core Purpose
-Technical communication on LinkedIn is saturated with dry, black-and-white text dumps, generic Canva templates, and cluttered diagrams that readers scroll past in seconds.
+### 1.1 Beyond Rigid Dimensions: Content Dictates Canvas
+Forcing a fixed dimension (such as 1080×1350 or 1080×1080) on every engineering concept is a fundamental visual flaw:
+* Squeezing a horizontal 6-stage distributed stream (e.g. Kafka partition rebalancing, multi-region Raft consensus) into a vertical 4:5 box forces unnatural line breaks, cramped nodes, and tangled arrows.
+* Stretches a simple 3-step vertical state machine across a wide landscape canvas, creating dead whitespace and disjointed scanning.
 
-Our primary goal is to **reinvent the presentation layer** of the LinkedIn Automation Studio:
-> *Create technical carousels and visual cards that are so breathtakingly beautiful, scenic, and technically precise that they stop readers in their feeds, spread sunshine and inspiration, and establish authoritative engineering leadership.*
+> **The Golden Law:** *The topological structure and cognitive complexity of the system design dictate the aspect ratio and canvas geometry — never an arbitrary preset.*
 
-### 1.2 The "Least Amount of Resources" Mandate ($0 Budget, Ultra-Lean Footprint)
-While visual beauty is paramount, **resource consumption must remain minimal**:
-* **$0 Operational Cost:** Zero third-party rendering APIs, zero cloud subscriptions, zero external GPU rendering fees.
-* **100% Offline & Local:** All HTML, CSS (Tailwind), SVG vector nodes, and fonts are stored locally. Zero runtime CDN dependencies or network font calls.
-* **Shared Headless Chromium Daemon:** Reuses a single persistent Playwright Chromium page in memory. Eliminates cold-start browser boot overhead, rendering each 1080×1350 slide in **~120–150 ms**.
-* **Sub-Second Total Compilation:** An entire 4-slide carousel PDF bundle and its accompanying high-resolution Slide 1 preview PNG are generated in **under 800 ms total**.
-
----
-
-## 2. Visual Style: "Scenic Dark Luxe"
-
-The visual aesthetic combines high-end IDE dark themes with ambient organic lighting glows (auroras), frosted glass cards, and technical engineering precision.
-
-```
-+-------------------------------------------------------------------------+
-|  [AMBIENT AURORA GLOW - Topic Matched]                                  |
-|  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  . |  <- Faint 10% Dot-Matrix Grid
-|                                                                         |
-|  [TOP SAFE ZONE]                                                        |
-|   {SYSTEM DESIGN STUDIO}                             [SLIDE 01 / 04]    |
-|                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  | FROSTED GLASS HERO CARD (backdrop-blur-md, border border-white/10)|  |
-|  |                                                                   |  |
-|  |  CATEGORY BADGE: ⚡ DISTRIBUTED STREAMING                         |  |
-|  |                                                                   |  |
-|  |  HOOK HEADLINE (42pt Bold):                                       |  |
-|  |  Why Kafka Consumer Groups Stall at 50k Msg/Sec                   |  |
-|  |                                                                   |  |
-|  |  SUBTITLE (20pt Muted):                                           |  |
-|  |  The Stop-the-World Rebalance Trap & How Sticky Partitions Fix It |  |
-|  |                                                                   |  |
-|  |  +-------------------------------------------------------------+  |  |
-|  |  | SCENIC MICRO-DIAGRAM (Vector SVG with Ambient Glow)         |  |  |
-|  |  | [Producer] ---> [[ Queue Cluster ]] ---> [Consumer Group]  |  |  |
-|  |  +-------------------------------------------------------------+  |  |
-|  +-------------------------------------------------------------------+  |
-|                                                                         |
-|  [BOTTOM SAFE ZONE]                                                     |
-|   @engineering-lead                          SWIPE FOR DEEP DIVE >>     |
-+-------------------------------------------------------------------------+ (1080 × 1350 px, 4:5)
-```
-
-### 2.1 The 4 Design Pillars of Scenic Dark Luxe
-1. **Obsidian Foundation Canvas:** Deep obsidian base (`#07090e`, `#0a0d14`) that makes foreground elements pop with vibrant contrast.
-2. **Dynamic Topic-Vibe Auroras:** Dual radial-gradient blurs positioned behind key cards, radiating organic neon and pastel glows that reflect the specific technical domain.
-3. **Frosted Glassmorphism:** Cards styled with semi-transparent backgrounds (`rgba(16, 22, 34, 0.75)`), subtle gradient borders (`border border-white/10`), and soft drop shadows (`shadow-2xl`).
-4. **Engineering Dot-Matrix & Geometry:** A subtle 10% opacity dot-matrix grid (`bg-[radial-gradient(#ffffff0a_1px,transparent_1px)]`) layered under the aurora, giving an authentic architectural blueprint feel.
+### 1.2 Beyond Cosmetic "Theme Colors": Semantic Cognitive Psychology
+Colors are not decorative wallpaper or arbitrary brand buckets. In world-class design engineering:
+* **Color is Semantic & Functional:** It guides eye velocity, signals state changes (nominal, degraded, critical), and directs cognitive focus.
+* **Luminance Precedes Hue:** The human visual cortex detects luminance (brightness contrast) before processing color hue. The architectural choke-point or primary data packet must possess the highest optical luminance; supporting scaffolding must recede into muted low-luminance neutrals.
+* **Complexity-Adaptive Saturation:** The higher the node complexity, the quieter the palette. A 10-node microservice mesh with saturated neons causes instant cognitive exhaustion. High architectural density demands **extreme color discipline: 90% neutral obsidian/slate, 10% purposeful focal accent.**
 
 ---
 
-## 3. Dynamic Topic-Vibe Color Auroras
+## 2. Adaptive Dimension & Topological Aspect Ratio Matrix
 
-The system automatically detects the topic domain from keywords, title, and tags, dynamically injecting the appropriate visual aura:
+The presentation engine dynamically assigns canvas dimensions based on the visual topology of the concept:
 
-| Technical Domain | Topics / Keywords | Aurora Background Glow | Primary Accent | Secondary Accent | Vibe & Atmosphere |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Security & Auth** | OAuth, JWT, Tokens, Rate Limiting, API Keys | Amber `#f59e0b` + Crimson `#ef4444` | `#fbbf24` (Gold) | `#f87171` (Rose) | High-stakes security, protective shield, incident vigilance. |
-| **Databases & Cache** | SQL, PostgreSQL, Redis, B-Tree, Sharding | Emerald `#10b981` + Ice Cyan `#06b6d4` | `#34d399` (Mint) | `#38bdf8` (Sky) | Resilient storage, low-latency cache, rock-solid consistency. |
-| **Streaming & Queues**| Kafka, RabbitMQ, Event-Driven, Pub/Sub | Neon Violet `#8b5cf6` + Electric Magenta `#ec4899` | `#a78bfa` (Purple) | `#f472b6` (Pink) | High-throughput velocity, event streams, cyberpunk energy. |
-| **Core Architecture** | API Gateways, Load Balancing, Idempotency | Electric Cyan `#00f0ff` + Cobalt `#3b82f6` | `#38bdf8` (Cyan) | `#60a5fa` (Cobalt) | Clean modern cloud infrastructure, high-fidelity systems. |
-
----
-
-## 4. The 4-Slide Scenic Narrative Structure
-
-Every carousel tells a complete, highly engaging 4-part story optimized for LinkedIn's vertical 4:5 mobile reader:
-
-```
-┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-│     SLIDE 1     │   │     SLIDE 2     │   │     SLIDE 3     │   │     SLIDE 4     │
-│   HERO HOOK     │──▶│  THE BOTTLENECK │──▶│   ELEGANT FIX   │──▶│ STAFF CHECKLIST │
-│                 │   │     (BEFORE)    │   │     (AFTER)     │   │                 │
-│ Visual Diagram  │   │ Failure Mode    │   │ Production Arch │   │ Battle Rules    │
-│ Incident Hook   │   │ Latency Spike   │   │ Vector Dataflow │   │ Tradeoff Matrix │
-└─────────────────┘   └─────────────────┘   └─────────────────┘   └─────────────────┘
-```
-
-### Slide 1: Hero Hook Card (The Attention Grabber)
-* **Goal:** Stop the scroll within 1.5 seconds.
-* **Components:**
-  - Topic category badge with glowing dot indicator.
-  - Large, punchy 3-line headline focused on an engineering problem or paradox.
-  - Subtitle clarifying the solution.
-  - Scenic preview micro-diagram illustrating the high-level system components.
-  - Subtle swipe callout (`SWIPE FOR ARCHITECTURE >>`).
-
-### Slide 2: The Production Bottleneck ("Before / The Breakdown")
-* **Goal:** Validate the engineer's real-world pain and explain the mechanism of failure.
-* **Components:**
-  - "INCIDENT BREAKDOWN" badge in crimson warning glow.
-  - Metric KPI pill (e.g., `p99 Latency: 4,850ms | Error Rate: 14.2%`).
-  - Architecture breakdown card showing where the choke-point occurs (e.g. database lock contention, consumer group rebalance storm).
-  - 2 concise bullet points explaining *why* standard approaches fail under peak load.
-
-### Slide 3: The Elegant Production Fix ("After / The Solution")
-* **Goal:** Deliver the "Aha!" moment with battle-tested technical design.
-* **Components:**
-  - "PRODUCTION SOLUTION" badge in emerald success glow.
-  - High-fidelity vector data-flow diagram showing the correct pattern (e.g., sliding window log with Redis pipeline, or cooperative sticky rebalance).
-  - Step-by-step numbered breakdown (1. Ingestion $\rightarrow$ 2. Lua verification $\rightarrow$ 3. Non-blocking ACK).
-  - Key architectural principle highlighted in a glowing glass card.
-
-### Slide 4: Staff-Level Takeaway & Checklist (The Discussion Catalyst)
-* **Goal:** Cement authority, drive post saves, and trigger comment discussions.
-* **Components:**
-  - "STAFF ARCHITECT CHECKLIST" badge.
-  - 3 non-negotiable production rules (e.g., timeout limits, circuit-breaker patterns, monitoring counters).
-  - Quick trade-off summary (Complexity vs. Latency vs. Cost).
-  - The Senior Engineer Discussion Question (e.g., *"How does your team handle consumer group scaling during traffic spikes?"*).
+| Topological Flow | Optimal Aspect Ratio | Resolution | Best Suited For | Visual Rationale |
+| :--- | :--- | :--- | :--- | :--- |
+| **Horizontal Panoramic** | **16:9** or **1.91:1** | `1920×1080` or `1200×630` | Event-driven pipelines, Kafka streams, distributed transactions (Saga/2PC), replication meshes | Unbroken left-to-right temporal progression without vertical node collisions. |
+| **Vertical Narrative** | **4:5** or **3:4** | `1080×1350` or `1080×1440` | Incident post-mortems, before/after code diffs, hierarchical protocol stacks, mobile carousels | Matches natural vertical thumb-scroll ergonomics on mobile feeds; allows vertical causality. |
+| **Harmonic Square** | **1:1** | `1080×1080` or `1440×1440` | Cyclic loops (Token Bucket refill, Leaky Bucket leak), circuit breaker tri-state machines, mental models | Radial optical symmetry; eye circulates evenly around the central state. |
+| **Ultra-Tall Infographic** | **9:16** | `1080×1920` | Full-stack end-to-end request lifecycle (Client $\rightarrow$ CDN $\rightarrow$ Gateway $\rightarrow$ Service $\rightarrow$ DB) | Complete vertical stack journey; maximum immersive feed presence. |
 
 ---
 
-## 5. Unified Dual-Format Delivery
+## 3. Cognitive Color Theory & Visual Psychology
 
-To maximize reach and engagement, our presentation engine generates a unified multi-format asset bundle:
+### 3.1 The 3-Tier Luminance Hierarchy
+To eliminate cognitive friction, every scene enforces strict luminance layering:
 
 ```
-                                  [ Presentation Engine ]
-                                             │
-                       ┌─────────────────────┴─────────────────────┐
-                       ▼                                           ▼
-             [ 1080 × 1350 px (4:5) ]                    [ 1080 × 1080 px (1:1) ]
-            LinkedIn PDF Document Carousel               Standalone Incident Card
-                       │                                           │
-         ┌─────────────┴─────────────┐                             │
-         ▼                           ▼                             ▼
-   [ 4-Slide PDF ]             [ Slide 1 PNG ]             [ Single Feed PNG ]
-  Document Carousel             Feed Preview                Thumbnail / Post
+[ LAYER 3: FOCAL POINT ]      Luminance: 85–100%  (White / Saturated Electric Accent)
+   │  -> The bottleneck, the race condition, or the active data packet.
+   │
+[ LAYER 2: SYSTEM NODES ]     Luminance: 35–60%   (Translucent Frosted Glass / Muted Tone)
+   │  -> Databases, API Gateways, Microservices, Queue Buffers.
+   │
+[ LAYER 1: CANVAS & CHROME ]  Luminance: 5–15%    (Deep Obsidian / Sub-10% Grid Lines)
+      -> Foundational backdrop, subtle dot matrix, secondary bounding frames.
 ```
 
-1. **LinkedIn PDF Carousel (`.pdf`, 1080 × 1350 px):** The complete 4-slide swipeable document. Uploading this as a LinkedIn Document gives readers a native in-feed slide viewer, resulting in **3x greater dwell time and algorithmic reach**.
-2. **Slide 1 Hero Cover (`.png`, 1080 × 1350 px):** Delivered simultaneously in Discord so the author can inspect the visual design on their mobile phone in full fidelity with a single tap.
-3. **Square Architecture Card (`.png`, 1080 × 1080 px):** Utilizes identical Scenic Dark Luxe design tokens for single-image posts and Manim video cover thumbnails.
+### 3.2 Emotional State & Topic Complexity Mapping
+Instead of fixed domain colors, palettes adapt to the **cognitive tension and technical depth** of the explanation:
+
+```
+                  HIGH COGNITIVE TENSION (Incident / Failure / Bottleneck)
+                                            ▲
+                                            │  Palette: High-contrast Obsidian Ground
+                                            │  Accents: Surgical Amber (#F59E0B) / Crimson (#EF4444)
+                                            │  Feel: High alertness, instant diagnosis
+                                            │
+FOUNDATIONAL CONCEPT ───────────────────────┼─────────────────────── BATTLE-TESTED PATTERN
+(Mental Model / 101)                        │                        (Staff Architecture / Solution)
+Palette: Analogous Soft Accents             │                        Palette: Harmonic Cyan / Mint Emerald
+Accents: Sky Cyan (#38BDF8) / Slate         │                        Accents: Mint (#10B981) / Violet (#8B5CF6)
+Feel: Approachable, serene, clear           │                        Feel: Momentum, elegance, rock-solid
+                                            ▼
+                  LOW COGNITIVE TENSION (Reference Architecture / Checklist)
+```
 
 ---
 
-## 6. Implementation Architecture
+## 4. Apple Designer Craft Standards (Emil Kowalski Foundations)
 
-### 6.1 Directory & Component Structure
+### 4.1 Typography: Optical Sizing, Dynamic Tracking & Leading
+Apple's core typography rule: **Tracking is size-specific — never a single fixed value.**
+
+* **Display Headlines (36–52pt):**
+  - **Negative Tracking:** `letter-spacing: -0.025em` to `-0.035em`. Tightens large glyphs so words read as cohesive units.
+  - **Compact Leading:** `line-height: 1.05` to `1.15`. Prevents multi-line headlines from disintegrating into disconnected stripes.
+  - **Optical Weight:** Bold or Heavy (`font-weight: 700` or `800`) to anchor the visual entry point.
+* **Body & Architectural Explanations (16–22pt):**
+  - **Neutral Tracking:** `letter-spacing: -0.005em` to `0em`. Optimal optical balance for extended technical reading.
+  - **Comfortable Leading:** `line-height: 1.45` to `1.55`. Ensures comfortable saccadic eye movements.
+* **Microcopy, Badges & Labels (11–14pt Uppercase):**
+  - **Positive Open Tracking:** `letter-spacing: +0.06em` to `+0.09em`. Prevents small uppercase glyphs from blending into illegible blocks.
+* **Monospace Code & Metrics:**
+  - **Tabular Numerals:** `font-variant-numeric: tabular-nums`. Guarantees that latency metrics (`p99: 142ms`, `p99: 4,850ms`) align vertically without jitter.
+
+### 4.2 Material Translucency & Specular Bevels
+Translucency creates physical spatial hierarchy without consuming visual weight:
+
+```css
+/* Apple-Grade Frosted Glass Material */
+.glass-node {
+  background: rgba(18, 24, 38, 0.72);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  
+  /* Specular top-edge light catch (physical bevel reflection) */
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+  
+  /* Continuous curvature squircle radius */
+  border-radius: 20px;
+  
+  /* Ambient occlusion depth shadow */
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 20px 25px -5px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+```
+
+### 4.3 Squircle Geometry (Continuous Curvature)
+Standard CSS `border-radius: 16px` creates a circular arc that joins tangent lines abruptly, creating harsh optical "corners." Apple uses the **superellipse (squircle)** with continuous curvature rate of change ($n \approx 5$). We emulate continuous curvature using micro-beveled compound radius tokens.
+
+### 4.4 Simplicity Over Minimalism (Apple Principle #6)
+> *"Strip the unnecessary so the core purpose shines; burying everything in one place looks minimal but isn't simple."*
+* Every line, node, and badge must earn its place.
+* If an arrow doesn't indicate causality, sequence, or data volume, it is deleted.
+* If a metric badge doesn't validate a production trade-off, it is cut.
+
+---
+
+## 5. Matt Pocock's "Deep Module" Applied to Visual Design
+
+Applying Matt Pocock's architectural philosophy (`codebase-design`) to technical visual cards:
+
+1. **Small Surface Interface (The 2-Second Gist):**
+   * The outer envelope of the graphic must convey the core architectural insight in under 2 seconds: *What broke, and what is the clean fix?*
+2. **Deep Internal Truth (The 30-Second Inspection):**
+   * Beneath the clean surface, every connection reflects real engineering truth: exact HTTP status codes, partition keys, cache invalidation TTLs, and concurrency locks.
+3. **Clean Seams:**
+   * Clear boundaries between infrastructure layers (Client $\leftrightarrow$ Gateway $\leftrightarrow$ Worker $\leftrightarrow$ Store) preventing visual spaghetti.
+
+---
+
+## 6. Implementation Architecture & Dynamic Engine
+
 ```
 src/
 ├── engines/
-│   ├── html_renderer.py          # Shared Playwright Chromium daemon (<150ms snapshotting)
-│   ├── scenic_carousel_engine.py # HTML/Tailwind 4-slide template builder & PDF compiler
-│   └── diagram_engine.py         # 1080x1080 Standalone diagram generator
-├── templates/
-│   ├── scenic_base.html          # Base HTML wrapper with Tailwind & local font caching
-│   ├── components/
-│   │   ├── aurora_bg.html        # Dynamic radial-gradient glow injection
-│   │   ├── glass_card.html       # Frosted glass card containers
-│   │   ├── micro_diagrams.html   # Vector SVG nodes (DB, Queue, Gateway, Cache)
-│   │   └── kpi_badge.html        # High-contrast metric pills
-│   └── slides/
-│       ├── slide_1_hook.html     # Hero Hook Card
-│       ├── slide_2_before.html   # Production Bottleneck
-│       ├── slide_3_after.html    # The Elegant Solution
-│       └── slide_4_checklist.html# Staff Takeaways & Rules
-└── assets/
-    ├── fonts/                    # Bundled local Inter & JetBrains Mono fonts (0 font tofu)
-    └── carousels/                # Output storage for compiled PDFs and PNG previews
+│   ├── adaptive_canvas_engine.py  # Selects 16:9, 4:5, 1:1 based on topology
+│   ├── cognitive_palette.py       # Computes dynamic luminance & semantic colors
+│   └── html_renderer.py           # Shared Playwright Chromium daemon
+├── design_system/
+│   ├── typography.css             # Size-specific tracking tables & tabular numerals
+│   ├── materials.css              # Specular bevels & squircle curvature tokens
+│   └── components/
+│       ├── flow_arrow.svg         # Directional vector with velocity line-weight
+│       ├── database_node.html     # Glassmorphic cylinder with replica indicators
+│       └── queue_partition.html   # Partitioned buffer with lag indicators
 ```
-
-### 6.2 Pre-compiled CSS & Font Performance Strategy
-* **Zero CDN requests:** Tailwind CSS is pre-compiled locally into a minified `tailwind.scenic.min.css` (~45 KB).
-* **Base64 / Local Font Ingestion:** `@font-face` rules point to local `.woff2` font files in `src/assets/fonts/`.
-* **Playwright Snapshot Optimization:**
-  ```python
-  page = await get_shared_page()
-  await page.set_viewport_size({"width": 1080, "height": 1350})
-  await page.set_content(slide_html, wait_until="domcontentloaded")
-  png_bytes = await page.screenshot(type="png", full_page=True)
-  ```
-* **PDF Compilation via Pillow / PyMuPDF:** The 4 rendered slide PNG buffers are stitched into a PDF in under **40 ms** in memory without writing intermediate files to disk.
 
 ---
 
-## 7. Delivery Experience in Discord
+## 7. Deliverables & Next Steps
 
-When the user selects or approves a Carousel or Diagram in Discord:
-
-```
-─────────────────────────────────────────────────────────────────
-🎉 YOUR READY-TO-POST LINKEDIN PACKAGE
-─────────────────────────────────────────────────────────────────
-[Formatted Post Copy with Hook, Bulleted Architecture, and Question]
-─────────────────────────────────────────────────────────────────
-📑 Ready-to-Upload 4-Slide PDF Document attached below (3x reach)
-🖼️ Slide 1 High-Res 4:5 Mobile Preview attached below
-
-[Button: Approve & Post]   [Button: Reject & Discard]
-─────────────────────────────────────────────────────────────────
-```
-
-The author can tap the Slide 1 PNG on mobile to immediately admire the aesthetic quality, inspect the typography, and confirm the topic vibe before approving.
-
----
-
-## 8. Success Criteria & Verification Metrics
-
-| Criterion | Target Requirement | Verification Method |
-| :--- | :--- | :--- |
-| **Visual Beauty & Vibe** | Topic-specific aurora lighting, frosted glassmorphism, zero font tofu, high aesthetic polish | Visual audit across all 4 topic categories (Security, DB, Streaming, Core). |
-| **Mobile Legibility** | 100% readable on 6-inch phone screen without zooming | Verified in 1080×1350 canvas with safe zones: $Y \in [120, 1230]$. |
-| **Generation Speed** | < 800 ms total for 4-slide PDF + preview PNG | Measured via Python `perf_counter()` benchmark test. |
-| **Memory Footprint** | Reuses shared Chromium page; RAM stays within baseline | Validated via memory leak and garbage collection tests. |
-| **Operational Cost** | $0.00 spent on any external API or cloud provider | 100% local Playwright + Pillow execution. |
+1. **Phase 1: Dynamic Canvas & Aspect Ratio Selector:** Engine analyzes incoming topic structure and dynamically emits either 16:9 Landscape, 4:5 Portrait, or 1:1 Square canvas.
+2. **Phase 2: Cognitive Palette Generator:** Replaces static color maps with dynamic luminance-based semantic palette generation.
+3. **Phase 3: Apple-Grade HTML/Tailwind Component System:** Implements specular glass bevels, negative headline tracking, tabular numerals, and vector micro-diagram primitives.
+4. **Phase 4: Discord Multi-Format Delivery:** Delivers the optimized asset with zero font tofu, sub-second execution, and $0 resource consumption.

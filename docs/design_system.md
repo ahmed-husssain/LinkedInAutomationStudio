@@ -13,13 +13,18 @@ To maximize retention and authority, all assets adhere to three foundational pil
 
 ---
 
-## 2. Canvas Specifications & Aspect Ratios
+## 2. Adaptive Canvas Geometry & Content Topology
 
-| Asset Modality | Resolution | Aspect Ratio | Primary Engine | Safe Zone Constraint |
+Canvas dimensions and aspect ratios are **content-topology driven**: the structural layout of the architectural mental model dictates the canvas, eliminating forced line wrapping and visual collisions:
+
+| Content Topology | Aspect Ratio | Resolution | Primary Modality | Safe Zone Constraint |
 | :--- | :--- | :--- | :--- | :--- |
-| **PDF Carousel** | 1080 × 1350 px | **4:5 Vertical** | Pillow (`PIL`) | Top 120px, Bottom 120px, Sides 90px |
-| **Motion Graphic Video** | 1080 × 1080 px | **1:1 Square** | Manim CE | $Y \ge -1.8$ (HUD Scrubber Reserved) |
-| **Architecture Diagram Card** | 1080 × 1080 px | **1:1 Square** | Pillow (`PIL`) | 80px Border Padding |
+| **Horizontal Streaming / Pipelines** | **16:9** or **1.91:1** | 1920 × 1080 / 1200 × 630 px | Architecture Diagram / Widescreen Card | 60px Outer Margin |
+| **Vertical Narrative / Carousel** | **4:5** | 1080 × 1350 px | LinkedIn PDF Document Carousel | Top 120px, Bottom 120px, Sides 90px |
+| **Cyclic / State Machine** | **1:1 Square** | 1080 × 1080 px | Motion Graphic Video / Mental Model Card | $Y \ge -1.8$ HUD Scrubber Reserved |
+| **End-to-End Stack Lifecycle** | **9:16 Ultra-Tall** | 1080 × 1920 px | Deep Full-Stack Vertical Journey | 80px Border Padding |
+
+For deep design psychology, typography tracking tables, and translucent material specifications, see [Scenic UI Presentation Layer Blueprint](SCENIC_UI_PRESENTATION_BLUEPRINT.md).
 
 ---
 
