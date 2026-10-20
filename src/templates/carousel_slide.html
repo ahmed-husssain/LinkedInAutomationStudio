@@ -109,29 +109,31 @@
       text-wrap: pretty;
     }
 
-    /* Slide Center Body Stage */
+    /* Slide Center Body Stage: Fluid vertical rhythm with zero dead void */
     .stage {
       flex: 1;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      margin: 24px 0;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 18px 0;
       position: relative;
+      min-height: 0;
     }
 
     /* Structured Narrative Blocks */
     .narrative-block {
-      background: rgba(18, 24, 38, 0.6);
+      background: rgba(18, 24, 38, 0.65);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 18px;
-      padding: 24px 28px;
+      padding: 22px 26px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
     .narrative-block.highlight {
       border-color: var(--accent);
-      background: rgba(18, 24, 38, 0.85);
+      background: rgba(18, 24, 38, 0.88);
       box-shadow: 0 8px 30px -4px var(--glow);
     }
     .block-tag {
@@ -143,9 +145,147 @@
       color: var(--accent);
     }
     .block-text {
-      font-size: 18px;
-      line-height: 1.5;
+      font-size: 17px;
+      line-height: 1.48;
       color: #cbd5e1;
+    }
+
+    /* 1. Scale Profile Matrix (3-Column KPI Bar) */
+    .scale-matrix {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      width: 100%;
+    }
+    .scale-kpi {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .scale-kpi-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .scale-kpi-val {
+      font-family: Consolas, monospace;
+      font-size: 18px;
+      font-weight: 800;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 2. macOS-Grade Terminal & Code Specimen */
+    .config-specimen {
+      background: #090d16;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
+    }
+    .specimen-header {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-green { background: #10b981; }
+    .specimen-title {
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      color: #64748b;
+      margin-left: 6px;
+      font-weight: 600;
+    }
+    .specimen-body {
+      padding: 14px 18px;
+      font-family: Consolas, 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #38bdf8;
+      line-height: 1.55;
+    }
+
+    /* 3. Senior Production Trade-Offs Matrix */
+    .tradeoff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      width: 100%;
+    }
+    .tradeoff-card {
+      border-radius: 16px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .tradeoff-card.gain {
+      background: rgba(16, 185, 129, 0.07);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+    .tradeoff-card.cost {
+      background: rgba(245, 158, 11, 0.07);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+    .tradeoff-tag {
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .tradeoff-text {
+      font-size: 14px;
+      line-height: 1.45;
+      color: #cbd5e1;
+    }
+
+    /* 4. Playbook Invariant Cards */
+    .playbook-card {
+      background: rgba(18, 24, 38, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .playbook-num {
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      font-weight: 800;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+    }
+    .playbook-content {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .playbook-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .playbook-sub {
+      font-size: 13px;
+      color: #94a3b8;
     }
 
     /* Metrics Bar Footer */
