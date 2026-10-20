@@ -9,6 +9,8 @@ To maximize retention and authority, all assets adhere to three foundational pil
 2. **Zero Collision Safe Zones:** Strict mathematical margins that prevent UI elements, progress scrubbers, or mobile overlays from clipping content.
 3. **Deterministic Vector Geometry (Zero Font Tofu):** All badges, arrows, and card structures are drawn programmatically using vector geometry, eliminating missing emoji glyph boxes (`[]`).
 
+> 🌟 **Scenic Presentation Layer:** For detailed specifications on the HTML/Tailwind **"Scenic Dark Luxe"** presentation architecture, topic auroras, and 4-slide storytelling flow, refer to [Scenic UI Presentation Layer Blueprint](SCENIC_UI_PRESENTATION_BLUEPRINT.md).
+
 ---
 
 ## 2. Canvas Specifications & Aspect Ratios
