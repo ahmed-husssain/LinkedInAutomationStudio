@@ -61,6 +61,7 @@ class PostRejectionRecoveryView(View):
         self.prev_angle = prev_angle
         self.prev_q = prev_q
         self.prev_format = prev_format
+        self.selected_reason: Optional[str] = None
 
         options = [
             discord.SelectOption(
@@ -79,7 +80,7 @@ class PostRejectionRecoveryView(View):
                 label="Topic was too complex / Hard to explain",
                 value="too_complex",
                 emoji="🧠",
-                description="Needs a simpler, more bite-sized mental model"
+                description="Needs a simpler, more bite-sized mental model (3 slides)"
             ),
             discord.SelectOption(
                 label="Wrong format (wanted Video or Carousel)",
@@ -95,7 +96,7 @@ class PostRejectionRecoveryView(View):
             ),
         ]
         select = Select(
-            placeholder="💬 What didn't satisfy you with this draft?",
+            placeholder="💬 Required: What didn't satisfy you with this draft?",
             min_values=1,
             max_values=1,
             options=options,
@@ -104,7 +105,7 @@ class PostRejectionRecoveryView(View):
         select.callback = self.feedback_callback
         self.add_item(select)
 
-        rerun_btn = Button(label="🔄 Regenerate (New Hook)", style=discord.ButtonStyle.primary, row=1)
+        rerun_btn = Button(label="🔄 Regenerate with Feedback", style=discord.ButtonStyle.primary, row=1)
         rerun_btn.callback = self.regenerate_callback
         self.add_item(rerun_btn)
 
@@ -123,13 +124,15 @@ class PostRejectionRecoveryView(View):
     def get_message_content(self) -> str:
         topic_name = self.topic.title if self.topic else "this concept"
         return (
-            f"🗑️ **Draft Rejected & Purged from Storage.** Zero disk footprint left.\n\n"
+            f"🗑️ **Draft Rejected & Purged.** PDF removed from chat and storage.\n\n"
             f"🎯 **Let's dial it in for '{topic_name}':**\n"
-            f"What was the main reason this didn't satisfy you, and how would you like to proceed?"
+            f"👉 **Step 1:** Select what didn't satisfy you from the dropdown below *(Required)*.\n"
+            f"👉 **Step 2:** Tap **'🔄 Regenerate with Feedback'** to produce an adjusted version."
         )
 
     async def feedback_callback(self, interaction: discord.Interaction):
         selected = interaction.data.get("values", [""])[0]
+        self.selected_reason = selected
         label_map = {
             "generic_hook": "Hook wasn't punchy / Too generic",
             "visual_style": "Visual/Diagram style didn't fit",
@@ -139,8 +142,8 @@ class PostRejectionRecoveryView(View):
         }
         reason = label_map.get(selected, "Feedback recorded")
         await interaction.response.send_message(
-            f"📝 **Feedback Noted:** *\"{reason}\"*\n"
-            f"Tap an action below to proceed with the adjusted draft:",
+            f"✅ **Feedback Recorded:** *\"{reason}\"*\n"
+            f"Now tap **'🔄 Regenerate with Feedback'** below to produce your adjusted draft!",
             ephemeral=True
         )
 
@@ -148,9 +151,23 @@ class PostRejectionRecoveryView(View):
         if not self.topic:
             await interaction.response.send_message("No topic active. Please pick a topic.", ephemeral=True)
             return
+        if not getattr(self, "selected_reason", None):
+            await interaction.response.send_message(
+                "⚠️ **Feedback Required:** Please select what didn't satisfy you from the dropdown above before regenerating, so the AI knows what to adjust!",
+                ephemeral=True
+            )
+            return
+
         await interaction.response.defer()
-        next_angle = self.topic.angles[1].text if len(self.topic.angles) > 1 else self.topic.angles[0].text
-        next_q = self.topic.questions[1] if len(self.topic.questions) > 1 else self.topic.questions[0]
+
+        # Adapt generation parameters based on user feedback
+        if self.selected_reason == "generic_hook":
+            next_angle = f"INCIDENT POST-MORTEM: When {self.topic.title} failed under sudden 100x traffic surge at 3 AM."
+            next_q = "What is the single most common failure mode your team monitors for in production?"
+        else:
+            next_angle = self.topic.angles[1].text if len(self.topic.angles) > 1 else self.topic.angles[0].text
+            next_q = self.topic.questions[1] if len(self.topic.questions) > 1 else self.topic.questions[0]
+
         CHANNEL_PENDING_APPROVAL[interaction.channel_id] = {"path": None, "type": self.prev_format}
         asyncio.create_task(
             deliver_post_package(
@@ -236,10 +253,24 @@ class PostApprovalView(View):
         for child in self.children:
             child.disabled = True
 
-        await interaction.response.edit_message(
-            content=interaction.message.content + "\n\n🗑️ **Draft Rejected & Discarded.** Zero disk trace left. Channel unlocked.",
-            view=self
-        )
+        # 1. Strip all attachments so the PDF cannot be viewed or downloaded
+        try:
+            await interaction.response.edit_message(
+                content="🗑️ **Draft Rejected & Discarded.** Attachments removed from chat and storage. Channel unlocked.",
+                attachments=[],
+                view=self
+            )
+        except Exception:
+            pass
+
+        # 2. Delete the rejected draft message completely from chat if supported
+        if hasattr(interaction, "message") and interaction.message:
+            try:
+                delete_fn = getattr(interaction.message, "delete", None)
+                if callable(delete_fn):
+                    await delete_fn()
+            except Exception:
+                pass
 
         # Launch Post-Rejection Recovery Flow
         if hasattr(interaction, "channel") and interaction.channel:

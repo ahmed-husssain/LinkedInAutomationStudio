@@ -174,6 +174,24 @@ def test_post_rejection_recovery_view_actions():
         await recovery.pick_topic_callback(mock_interaction_pick)
         mock_interaction_pick.response.send_message.assert_called_once()
 
+        # Test regeneration restriction: blocked if no feedback selected
+        fresh_recovery = PostRejectionRecoveryView(topic=topic, prev_format="diagram")
+        mock_interaction_regen_fail = MagicMock()
+        mock_interaction_regen_fail.response.send_message = AsyncMock()
+        await fresh_recovery.regenerate_callback(mock_interaction_regen_fail)
+        mock_interaction_regen_fail.response.send_message.assert_called_once()
+        fail_msg = mock_interaction_regen_fail.response.send_message.call_args.args[0]
+        assert "Feedback Required" in fail_msg
+
+        # Test regeneration proceeds once feedback is selected
+        fresh_recovery.selected_reason = "too_complex"
+        mock_interaction_regen_ok = MagicMock()
+        mock_interaction_regen_ok.response.defer = AsyncMock()
+        mock_interaction_regen_ok.channel_id = 999009
+        mock_interaction_regen_ok.channel = AsyncMock()
+        await fresh_recovery.regenerate_callback(mock_interaction_regen_ok)
+        mock_interaction_regen_ok.response.defer.assert_called_once()
+
     asyncio.run(_run())
 
 
