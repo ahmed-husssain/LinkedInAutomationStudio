@@ -601,11 +601,7 @@ async def deliver_post_package(
 
             await _update_progress(3, 3, "Staging carousel draft package...")
             generated_path = Path(pdf_path)
-            attached_files = [discord.File(str(pdf_path), filename=f"draft_{unique_id}_{file_base}_Carousel.pdf")]
-            if cover_path and Path(cover_path).exists():
-                attached_files.append(
-                    discord.File(str(cover_path), filename=f"draft_{unique_id}_{file_base}_Cover.png")
-                )
+            pdf_file = discord.File(str(pdf_path), filename=f"draft_{unique_id}_{file_base}_Carousel.pdf")
 
             approval_view = PostApprovalView(
                 channel_id=channel.id,
@@ -631,7 +627,7 @@ async def deliver_post_package(
                     f"**Interactive 1080x1350 PDF Carousel attached below** *(Upload as 'Document' on LinkedIn for 3x reach)*:\n\n"
                     f"**APPROVAL GATE:** Tap 'Approve' to post, or 'Reject' to discard and clean up:"
                 ),
-                files=attached_files,
+                file=pdf_file,
                 view=approval_view
             )
             await _update_progress(3, 3, "Complete: Carousel draft ready for review.")
