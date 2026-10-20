@@ -349,7 +349,39 @@ def test_synchronized_delivery_progress_and_cache_busting():
     asyncio.run(_run())
 
 
+def test_post_rejection_recovery_view_format_aware_video():
+    """Verifies that PostRejectionRecoveryView renders video timing options instead of slides when rejecting video."""
+    from src.bot.views import PostRejectionRecoveryView
+
+    topic = TOPIC_POOL[0]
+    recovery = PostRejectionRecoveryView(topic=topic, prev_format="video")
+
+    content = recovery.get_message_content()
+    assert "Video removed from chat" in content
+    assert "Video timing extension" in content
+    assert "slide depth" not in content.lower()
+
+    # Verify timing options
+    assert hasattr(recovery, "param_select")
+    timing_values = [opt.value for opt in recovery.param_select.options]
+    assert "+4s" in timing_values
+    assert "+6s" in timing_values
+    assert "standard" in timing_values
 
 
+def test_rejection_consultation_modal_format_aware_video():
+    """Verifies that RejectionConsultationModal prompts for video timing when rejecting video."""
+    from src.bot.views import RejectionConsultationModal
 
+    topic = TOPIC_POOL[0]
+    modal = RejectionConsultationModal(
+        topic=topic,
+        file_path=None,
+        format_type="video",
+        angle_content="Test angle",
+        senior_question="Test Q"
+    )
 
+    assert "timing" in modal.param_input.label.lower()
+    assert "slides" not in modal.param_input.label.lower()
+    assert "+4s" in modal.param_input.default

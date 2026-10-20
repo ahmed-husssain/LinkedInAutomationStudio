@@ -82,15 +82,35 @@ class RejectionConsultationModal(Modal, title="Draft Rejection Consultation"):
         )
         self.add_item(self.angle_input)
 
-        self.slides_input = TextInput(
-            label="3. Slide count preference (3, 4, or 5)",
-            style=discord.TextStyle.short,
-            placeholder="3 (Mental Model), 4 (Incident & Architecture), or 5 (Lifecycle & Runbook)",
-            required=False,
-            default="4",
-            max_length=2,
-        )
-        self.add_item(self.slides_input)
+        if self.format_type == "video":
+            self.param_input = TextInput(
+                label="3. Video timing preference (+4s, +6s, or standard)",
+                style=discord.TextStyle.short,
+                placeholder="+4s (Detailed breakdown), +6s (Deep walkthrough), or standard",
+                required=False,
+                default="+4s",
+                max_length=20,
+            )
+        elif self.format_type == "diagram":
+            self.param_input = TextInput(
+                label="3. Visual aspect ratio (1:1, 4:5, or 16:9)",
+                style=discord.TextStyle.short,
+                placeholder="1:1 (Square), 4:5 (Portrait), or 16:9 (Landscape)",
+                required=False,
+                default="1:1",
+                max_length=15,
+            )
+        else:
+            self.param_input = TextInput(
+                label="3. Slide count preference (3, 4, or 5)",
+                style=discord.TextStyle.short,
+                placeholder="3 (Mental Model), 4 (Incident & Architecture), or 5 (Lifecycle & Runbook)",
+                required=False,
+                default="4",
+                max_length=2,
+            )
+        self.add_item(self.param_input)
+        self.slides_input = self.param_input  # Backwards compatibility alias
 
     async def on_submit(self, interaction: discord.Interaction):
         # 1. Purge draft file from storage
@@ -100,7 +120,7 @@ class RejectionConsultationModal(Modal, title="Draft Rejection Consultation"):
         # 2. Release channel lock
         CHANNEL_PENDING_APPROVAL.pop(interaction.channel_id, None)
 
-        # 3. Delete original rejected message from chat so the rejected PDF completely disappears
+        # 3. Delete original rejected message from chat so the rejected draft completely disappears
         if self.draft_message:
             try:
                 await self.draft_message.delete()
@@ -109,19 +129,33 @@ class RejectionConsultationModal(Modal, title="Draft Rejection Consultation"):
 
         reason = self.reason_input.value.strip()
         pivot_angle = self.angle_input.value.strip()
-        try:
-            slide_count = int(self.slides_input.value.strip())
-            slide_count = max(3, min(5, slide_count))
-        except (ValueError, TypeError):
-            slide_count = 4
+        param_val = self.param_input.value.strip()
+
+        slide_count = 4
+        timing_extension = "standard"
+        ratio_pref = "1:1"
+
+        if self.format_type == "video":
+            timing_extension = param_val or "+4s"
+            param_summary = f"• **Video Timing:** **{timing_extension} Pacing**"
+        elif self.format_type == "diagram":
+            ratio_pref = param_val or "1:1"
+            param_summary = f"• **Visual Aspect Ratio:** **{ratio_pref}**"
+        else:
+            try:
+                slide_count = int(param_val)
+                slide_count = max(3, min(5, slide_count))
+            except (ValueError, TypeError):
+                slide_count = 4
+            param_summary = f"• **Target Slide Count:** **{slide_count} Slides**"
 
         # 4. Confirm answers in chat
         await interaction.response.send_message(
-            f"🗑️ **Rejected Draft Discarded & Purged.** PDF removed from chat and storage.\n\n"
+            f"🗑️ **Rejected Draft Discarded & Purged.** Asset removed from chat and storage.\n\n"
             f"📋 **Architectural Consultation Answers:**\n"
             f"• **Identified Issue:** *\"{reason}\"*\n"
             f"• **Technical Pivot:** *\"{pivot_angle}\"*\n"
-            f"• **Target Slide Count:** **{slide_count} Slides**\n\n"
+            f"{param_summary}\n\n"
             f"🔄 **Regenerating custom draft tailored to your parameters...**"
         )
 
@@ -137,6 +171,7 @@ class RejectionConsultationModal(Modal, title="Draft Rejection Consultation"):
                     format_type=self.format_type,
                     feedback=f"{reason} | Pivot: {pivot_angle}",
                     slide_count=slide_count,
+                    timing_extension=timing_extension,
                 )
             )
 
@@ -233,21 +268,57 @@ class PostRejectionRecoveryView(View):
         else:
             self.angle_select = None
 
-        # 3. Slide Count Selector
-        slide_options = [
-            discord.SelectOption(label="3 Slides • Focused Mental Model", value="3", emoji="🥉"),
-            discord.SelectOption(label="4 Slides • Incident & Architecture", value="4", emoji="📄", default=True),
-            discord.SelectOption(label="5 Slides • Distributed Lifecycle", value="5", emoji="📚"),
-        ]
-        self.slide_select = Select(
-            placeholder="📐 3. Choose target slide count (3, 4, or 5)...",
-            min_values=1,
-            max_values=1,
-            options=slide_options,
-            row=2
-        )
-        self.slide_select.callback = self.on_slide_change
-        self.add_item(self.slide_select)
+        # 3. Format-Aware Recovery Selector: Video Timing vs Diagram Layout vs Carousel Slides
+        if self.prev_format == "video":
+            self.selected_timing: str = "+4s"
+            timing_options = [
+                discord.SelectOption(label="Extended Walkthrough (+4s)", value="+4s", description="Adds +4 seconds (~15-16s) to clearly explain complex mechanisms", emoji="⏱️", default=True),
+                discord.SelectOption(label="Deep Breakdown (+6s)", value="+6s", description="Adds +6 seconds (~18-20s) for thorough architecture walkthrough", emoji="⏳"),
+                discord.SelectOption(label="Standard Duration (Fast)", value="standard", description="Standard 10-12s concise animation pacing", emoji="⚡"),
+            ]
+            self.param_select = Select(
+                placeholder="⏱️ 3. Choose video timing (+4s, +6s, or standard)...",
+                min_values=1,
+                max_values=1,
+                options=timing_options,
+                row=2
+            )
+            self.param_select.callback = self.on_timing_change
+            self.add_item(self.param_select)
+            self.slide_select = self.param_select
+        elif self.prev_format == "diagram":
+            self.selected_ratio: str = "1:1"
+            ratio_options = [
+                discord.SelectOption(label="1:1 Square (1080x1080)", value="1:1", description="Optimal for mobile LinkedIn feed card", emoji="⏹️", default=True),
+                discord.SelectOption(label="4:5 Portrait (1080x1350)", value="4:5", description="Tall format maximizing mobile screen real estate", emoji="📱"),
+                discord.SelectOption(label="16:9 Landscape (1920x1080)", value="16:9", description="Wide architecture diagram for desktop views", emoji="🖥️"),
+            ]
+            self.param_select = Select(
+                placeholder="🖼️ 3. Choose diagram aspect ratio / layout...",
+                min_values=1,
+                max_values=1,
+                options=ratio_options,
+                row=2
+            )
+            self.param_select.callback = self.on_ratio_change
+            self.add_item(self.param_select)
+            self.slide_select = self.param_select
+        else:
+            slide_options = [
+                discord.SelectOption(label="3 Slides • Focused Mental Model", value="3", emoji="🥉"),
+                discord.SelectOption(label="4 Slides • Incident & Architecture", value="4", emoji="📄", default=True),
+                discord.SelectOption(label="5 Slides • Distributed Lifecycle", value="5", emoji="📚"),
+            ]
+            self.slide_select = Select(
+                placeholder="📐 3. Choose target slide count (3, 4, or 5)...",
+                min_values=1,
+                max_values=1,
+                options=slide_options,
+                row=2
+            )
+            self.slide_select.callback = self.on_slide_change
+            self.add_item(self.slide_select)
+            self.param_select = self.slide_select
 
         # 4. Action Buttons
         self.rerun_btn = Button(label="🔄 Regenerate with Answers", style=discord.ButtonStyle.primary, row=3)
@@ -268,13 +339,20 @@ class PostRejectionRecoveryView(View):
 
     def get_message_content(self) -> str:
         topic_name = self.topic.title if self.topic else "this concept"
+        format_name = "Video" if self.prev_format == "video" else ("Diagram" if self.prev_format == "diagram" else "PDF")
+        if self.prev_format == "video":
+            q3_text = "👉 **Question 3:** Video timing extension (+4s, +6s, or standard pacing)?"
+        elif self.prev_format == "diagram":
+            q3_text = "👉 **Question 3:** Visual aspect ratio / layout (1:1, 4:5, or 16:9)?"
+        else:
+            q3_text = "👉 **Question 3:** Target slide depth (3, 4, or 5 slides)?"
         return (
-            f"🗑️ **Draft Rejected & Purged.** PDF removed from chat and storage.\n\n"
+            f"🗑️ **Draft Rejected & Purged.** {format_name} removed from chat and storage.\n\n"
             f"🎯 **Architectural Consultation: Refine '{topic_name}'**\n"
             f"────────────────────────────────────────\n"
             f"👉 **Question 1:** What was wrong with the previous draft? *(Required)*\n"
             f"👉 **Question 2:** Which architectural angle should we pivot to?\n"
-            f"👉 **Question 3:** Target slide depth (3, 4, or 5 slides)?\n"
+            f"{q3_text}\n"
             f"────────────────────────────────────────\n"
             f"*(Select your answers above, then tap **'🔄 Regenerate with Answers'**)*"
         )
@@ -309,6 +387,14 @@ class PostRejectionRecoveryView(View):
         if val.startswith("angle_") and self.topic:
             idx = int(val.split("_")[1])
             self.selected_angle = self.topic.angles[idx].text
+        await interaction.response.defer()
+
+    async def on_timing_change(self, interaction: discord.Interaction):
+        self.selected_timing = interaction.data.get("values", ["+4s"])[0]
+        await interaction.response.defer()
+
+    async def on_ratio_change(self, interaction: discord.Interaction):
+        self.selected_ratio = interaction.data.get("values", ["1:1"])[0]
         await interaction.response.defer()
 
     async def on_slide_change(self, interaction: discord.Interaction):
@@ -359,6 +445,16 @@ class PostRejectionRecoveryView(View):
         next_angle = self.selected_angle or (self.topic.angles[1].text if len(self.topic.angles) > 1 else self.topic.angles[0].text)
         next_q = self.topic.questions[1] if len(self.topic.questions) > 1 else self.topic.questions[0]
 
+        timing_ext = getattr(self, "selected_timing", "+4s") if self.prev_format == "video" else "standard"
+        ratio_ext = getattr(self, "selected_ratio", "1:1") if self.prev_format == "diagram" else "1:1"
+
+        if self.prev_format == "video":
+            feedback_str = f"{reason_desc} | Video Timing: {timing_ext}"
+        elif self.prev_format == "diagram":
+            feedback_str = f"{reason_desc} | Aspect Ratio: {ratio_ext}"
+        else:
+            feedback_str = f"{reason_desc} | Slide Count: {self.selected_slides}"
+
         CHANNEL_PENDING_APPROVAL[interaction.channel_id] = {"path": None, "type": self.prev_format}
         asyncio.create_task(
             deliver_post_package(
@@ -367,8 +463,9 @@ class PostRejectionRecoveryView(View):
                 angle_content=next_angle,
                 senior_question=next_q,
                 format_type=self.prev_format,
-                feedback=f"{reason_desc} | Slide Count: {self.selected_slides}",
+                feedback=feedback_str,
                 slide_count=self.selected_slides,
+                timing_extension=timing_ext,
             )
         )
 
@@ -680,6 +777,7 @@ async def deliver_post_package(
     progress_msg: Optional[discord.Message] = None,
     feedback: Optional[str] = None,
     slide_count: Optional[int] = None,
+    timing_extension: Optional[str] = None,
 ):
     """
     Renders and sends the complete LinkedIn package to the Discord channel
@@ -734,9 +832,25 @@ async def deliver_post_package(
                 )
                 return
 
-            await _update_progress(2, 3, f"Compiling video animation asset ({chosen_filename})...")
-            generated_path = Path(video_path)
-            v_file = discord.File(str(video_path), filename=f"draft_{unique_id}_{chosen_filename}")
+            extra_secs = 0.0
+            if timing_extension:
+                clean_ext = timing_extension.lower().strip()
+                if "+6" in clean_ext or "6s" in clean_ext or "deep" in clean_ext:
+                    extra_secs = 6.0
+                elif "+4" in clean_ext or "4s" in clean_ext or "extended" in clean_ext:
+                    extra_secs = 4.0
+
+            if extra_secs > 0:
+                await _update_progress(2, 3, f"Adjusting animation pacing (+{int(extra_secs)}s for deep walkthrough)...")
+                from src.engines.storage_manager import DRAFTS_DIR
+                from src.engines.video_engine import adjust_video_pacing_async
+                out_timed = DRAFTS_DIR / f"draft_{unique_id}_{int(extra_secs)}s_{chosen_filename}"
+                generated_path = await adjust_video_pacing_async(Path(video_path), out_timed, extra_seconds=extra_secs, quality="high")
+            else:
+                await _update_progress(2, 3, f"Compiling video animation asset ({chosen_filename})...")
+                generated_path = Path(video_path)
+
+            v_file = discord.File(str(generated_path), filename=f"draft_{unique_id}_{generated_path.name}")
 
             await _update_progress(3, 3, "Staging LinkedIn draft package and thumbnail...")
 
