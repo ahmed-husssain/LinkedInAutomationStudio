@@ -11,7 +11,7 @@ import time
 import re
 from typing import List, Optional, Callable
 import discord
-from discord.ui import Button, View, Select
+from discord.ui import Button, View, Select, Modal, TextInput
 
 from src.config.topics import Topic, TOPIC_POOL, get_topic_consultation_data
 from src.engines.text_splitter import split_text_for_option
@@ -40,21 +40,119 @@ RECENT_TOPIC_IDS: deque = deque(["oauth"], maxlen=6)
 
 
 
+class RejectionConsultationModal(Modal, title="Draft Rejection Consultation"):
+    """
+    Mandatory architectural consultation modal that pops up when user rejects a draft.
+    Requires specific technical questions to be answered before regeneration proceeds.
+    """
+    def __init__(
+        self,
+        topic: Topic,
+        file_path: Optional[Path],
+        format_type: str,
+        angle_content: str,
+        senior_question: str,
+        message: Optional[discord.Message] = None,
+    ):
+        super().__init__()
+        self.topic = topic
+        self.file_path = file_path
+        self.format_type = format_type
+        self.angle_content = angle_content
+        self.senior_question = senior_question
+        self.draft_message = message
+
+        self.reason_input = TextInput(
+            label="1. Why are you rejecting this draft?",
+            style=discord.TextStyle.paragraph,
+            placeholder="e.g. Too theoretical, wrong failure pattern, irrelevant diagrams, weak hook...",
+            required=True,
+            min_length=5,
+            max_length=500,
+        )
+        self.add_item(self.reason_input)
+
+        self.angle_input = TextInput(
+            label="2. What technical angle should we pivot to?",
+            style=discord.TextStyle.short,
+            placeholder="e.g. Focus on RS256 token rotation, Redis token families, Bloom filters...",
+            required=True,
+            min_length=5,
+            max_length=200,
+        )
+        self.add_item(self.angle_input)
+
+        self.slides_input = TextInput(
+            label="3. Slide count preference (3, 4, or 5)",
+            style=discord.TextStyle.short,
+            placeholder="3 (Mental Model), 4 (Incident & Architecture), or 5 (Lifecycle & Runbook)",
+            required=False,
+            default="4",
+            max_length=2,
+        )
+        self.add_item(self.slides_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # 1. Purge draft file from storage
+        if self.file_path:
+            purge_draft(self.file_path)
+
+        # 2. Release channel lock
+        CHANNEL_PENDING_APPROVAL.pop(interaction.channel_id, None)
+
+        # 3. Delete original rejected message from chat so the rejected PDF completely disappears
+        if self.draft_message:
+            try:
+                await self.draft_message.delete()
+            except Exception:
+                pass
+
+        reason = self.reason_input.value.strip()
+        pivot_angle = self.angle_input.value.strip()
+        try:
+            slide_count = int(self.slides_input.value.strip())
+            slide_count = max(3, min(5, slide_count))
+        except (ValueError, TypeError):
+            slide_count = 4
+
+        # 4. Confirm answers in chat
+        await interaction.response.send_message(
+            f"🗑️ **Rejected Draft Discarded & Purged.** PDF removed from chat and storage.\n\n"
+            f"📋 **Architectural Consultation Answers:**\n"
+            f"• **Identified Issue:** *\"{reason}\"*\n"
+            f"• **Technical Pivot:** *\"{pivot_angle}\"*\n"
+            f"• **Target Slide Count:** **{slide_count} Slides**\n\n"
+            f"🔄 **Regenerating custom draft tailored to your parameters...**"
+        )
+
+        # 5. Launch regeneration
+        if hasattr(interaction, "channel") and interaction.channel:
+            CHANNEL_PENDING_APPROVAL[interaction.channel_id] = {"path": None, "type": self.format_type}
+            asyncio.create_task(
+                deliver_post_package(
+                    channel=interaction.channel,
+                    topic=self.topic,
+                    angle_content=f"• Focus: {pivot_angle}\n• Constraint: {reason}",
+                    senior_question=self.senior_question,
+                    format_type=self.format_type,
+                    feedback=f"{reason} | Pivot: {pivot_angle}",
+                    slide_count=slide_count,
+                )
+            )
+
+
 class PostRejectionRecoveryView(View):
     """
-    Post-Rejection Feedback & Recovery Router.
-    Collects rejection reason and provides 1-tap recovery actions:
-    - 🔄 Regenerate with Alternate Hook
-    - 🎨 Switch Format / Theme
-    - 🎯 Choose Another Topic
-    - 🔥 AI Discover Bite-Sized Topics
+    Post-Rejection Multi-Question Consultation & Recovery Router.
+    Collects failure reason, architectural pivot angle, and slide count
+    before allowing the user to regenerate.
     """
     def __init__(
         self,
         topic: Optional[Topic] = None,
         prev_angle: str = "",
         prev_q: str = "",
-        prev_format: str = "diagram"
+        prev_format: str = "carousel",
     ):
         super().__init__(timeout=600)
         self.topic = topic
@@ -62,13 +160,22 @@ class PostRejectionRecoveryView(View):
         self.prev_q = prev_q
         self.prev_format = prev_format
         self.selected_reason: Optional[str] = None
+        self.selected_angle: Optional[str] = None
+        self.selected_slides: int = 4
 
-        options = [
+        # 1. Failure Reason Dropdown (Required)
+        reason_options = [
             discord.SelectOption(
                 label="Hook wasn't punchy / Too generic",
                 value="generic_hook",
                 emoji="🎣",
                 description="Needs a stronger engineering incident or curiosity hook"
+            ),
+            discord.SelectOption(
+                label="Irrelevant diagrams / Not specific",
+                value="irrelevant_diagram",
+                emoji="📊",
+                description="Diagrams and code did not match the specific topic domain"
             ),
             discord.SelectOption(
                 label="Visual/Diagram style didn't fit",
@@ -83,75 +190,154 @@ class PostRejectionRecoveryView(View):
                 description="Needs a simpler, more bite-sized mental model (3 slides)"
             ),
             discord.SelectOption(
-                label="Wrong format (wanted Video or Carousel)",
-                value="wrong_format",
-                emoji="📐",
-                description="Prefer a different visual presentation"
-            ),
-            discord.SelectOption(
-                label="Just want a fresh regeneration",
-                value="reroll",
-                emoji="🔄",
-                description="Reroll with different angles and phrasing"
+                label="Wrong failure pattern / log specimen",
+                value="wrong_failure",
+                emoji="🪵",
+                description="Failure logs and degradation timeline did not fit reality"
             ),
         ]
-        select = Select(
-            placeholder="💬 Required: What didn't satisfy you with this draft?",
+        self.reason_select = Select(
+            placeholder="💬 1. Required: What was wrong with this draft?",
             min_values=1,
             max_values=1,
-            options=options,
+            options=reason_options,
             row=0
         )
-        select.callback = self.feedback_callback
-        self.add_item(select)
+        self.reason_select.callback = self.feedback_callback
+        self.add_item(self.reason_select)
 
-        rerun_btn = Button(label="🔄 Regenerate with Feedback", style=discord.ButtonStyle.primary, row=1)
-        rerun_btn.callback = self.regenerate_callback
-        self.add_item(rerun_btn)
+        # 2. Angle Pivot Dropdown (Populated from Topic Angles)
+        if topic and topic.angles:
+            angle_options = []
+            for idx, a in enumerate(topic.angles[:4]):
+                l1, l2 = split_text_for_option(a.label, max_line1=38, max_line2=95)
+                if not l2 and a.desc:
+                    l2 = a.desc[:95]
+                angle_options.append(
+                    discord.SelectOption(
+                        label=l1,
+                        value=f"angle_{idx}",
+                        description=l2,
+                        emoji="🎯"
+                    )
+                )
+            self.angle_select = Select(
+                placeholder="🎯 2. Choose architectural angle to pivot to...",
+                min_values=1,
+                max_values=1,
+                options=angle_options,
+                row=1
+            )
+            self.angle_select.callback = self.on_angle_change
+            self.add_item(self.angle_select)
+        else:
+            self.angle_select = None
 
-        format_btn = Button(label="🎨 Switch Format", style=discord.ButtonStyle.secondary, row=1)
+        # 3. Slide Count Selector
+        slide_options = [
+            discord.SelectOption(label="3 Slides • Focused Mental Model", value="3", emoji="🥉"),
+            discord.SelectOption(label="4 Slides • Incident & Architecture", value="4", emoji="📄", default=True),
+            discord.SelectOption(label="5 Slides • Distributed Lifecycle", value="5", emoji="📚"),
+        ]
+        self.slide_select = Select(
+            placeholder="📐 3. Choose target slide count (3, 4, or 5)...",
+            min_values=1,
+            max_values=1,
+            options=slide_options,
+            row=2
+        )
+        self.slide_select.callback = self.on_slide_change
+        self.add_item(self.slide_select)
+
+        # 4. Action Buttons
+        self.rerun_btn = Button(label="🔄 Regenerate with Answers", style=discord.ButtonStyle.primary, row=3)
+        self.rerun_btn.callback = self.regenerate_callback
+        self.add_item(self.rerun_btn)
+
+        self.modal_btn = Button(label="✏️ Write Custom Feedback (Modal)", style=discord.ButtonStyle.secondary, row=3)
+        self.modal_btn.callback = self.open_modal_callback
+        self.add_item(self.modal_btn)
+
+        format_btn = Button(label="🎨 Switch Format", style=discord.ButtonStyle.secondary, row=4)
         format_btn.callback = self.switch_format_callback
         self.add_item(format_btn)
 
-        pick_btn = Button(label="🎯 Pick Another Topic", style=discord.ButtonStyle.secondary, row=2)
+        pick_btn = Button(label="🎯 Pick Another Topic", style=discord.ButtonStyle.secondary, row=4)
         pick_btn.callback = self.pick_topic_callback
         self.add_item(pick_btn)
-
-        ai_btn = Button(label="🔥 AI Discover Bite-Sized Topics", style=discord.ButtonStyle.green, row=2)
-        ai_btn.callback = self.ai_discover_callback
-        self.add_item(ai_btn)
 
     def get_message_content(self) -> str:
         topic_name = self.topic.title if self.topic else "this concept"
         return (
             f"🗑️ **Draft Rejected & Purged.** PDF removed from chat and storage.\n\n"
-            f"🎯 **Let's dial it in for '{topic_name}':**\n"
-            f"👉 **Step 1:** Select what didn't satisfy you from the dropdown below *(Required)*.\n"
-            f"👉 **Step 2:** Tap **'🔄 Regenerate with Feedback'** to produce an adjusted version."
+            f"🎯 **Architectural Consultation: Refine '{topic_name}'**\n"
+            f"────────────────────────────────────────\n"
+            f"👉 **Question 1:** What was wrong with the previous draft? *(Required)*\n"
+            f"👉 **Question 2:** Which architectural angle should we pivot to?\n"
+            f"👉 **Question 3:** Target slide depth (3, 4, or 5 slides)?\n"
+            f"────────────────────────────────────────\n"
+            f"*(Select your answers above, then tap **'🔄 Regenerate with Answers'**)*"
         )
 
     async def feedback_callback(self, interaction: discord.Interaction):
-        selected = interaction.data.get("values", [""])[0]
-        self.selected_reason = selected
+        self.selected_reason = interaction.data.get("values", [""])[0]
         label_map = {
             "generic_hook": "Hook wasn't punchy / Too generic",
+            "irrelevant_diagram": "Irrelevant diagrams / Not specific",
             "visual_style": "Visual/Diagram style didn't fit",
             "too_complex": "Topic was too complex / Hard to explain",
-            "wrong_format": "Wrong format (wanted Video or Carousel)",
-            "reroll": "Just want a fresh regeneration",
+            "wrong_failure": "Wrong failure pattern / log specimen",
         }
-        reason = label_map.get(selected, "Feedback recorded")
-        await interaction.response.send_message(
-            f"✅ **Feedback Recorded:** *\"{reason}\"*\n"
-            f"Now tap **'🔄 Regenerate with Feedback'** below to produce your adjusted draft!",
-            ephemeral=True
+        reason = label_map.get(self.selected_reason, "Feedback recorded")
+        try:
+            await interaction.response.send_message(
+                f"✅ **Feedback Recorded:** *\"{reason}\"*\n"
+                f"Now tap **'🔄 Regenerate with Answers'** below to produce your adjusted draft!",
+                ephemeral=True
+            )
+        except Exception:
+            try:
+                await interaction.response.defer()
+            except Exception:
+                pass
+
+    async def on_reason_change(self, interaction: discord.Interaction):
+        await self.feedback_callback(interaction)
+
+    async def on_angle_change(self, interaction: discord.Interaction):
+        val = interaction.data.get("values", [""])[0]
+        if val.startswith("angle_") and self.topic:
+            idx = int(val.split("_")[1])
+            self.selected_angle = self.topic.angles[idx].text
+        await interaction.response.defer()
+
+    async def on_slide_change(self, interaction: discord.Interaction):
+        val = interaction.data.get("values", ["4"])[0]
+        try:
+            self.selected_slides = int(val)
+        except ValueError:
+            self.selected_slides = 4
+        await interaction.response.defer()
+
+    async def open_modal_callback(self, interaction: discord.Interaction):
+        if not self.topic:
+            await interaction.response.send_message("No topic active.", ephemeral=True)
+            return
+        modal = RejectionConsultationModal(
+            topic=self.topic,
+            file_path=None,
+            format_type=self.prev_format,
+            angle_content=self.prev_angle,
+            senior_question=self.prev_q,
+            message=interaction.message,
         )
+        await interaction.response.send_modal(modal)
 
     async def regenerate_callback(self, interaction: discord.Interaction):
         if not self.topic:
             await interaction.response.send_message("No topic active. Please pick a topic.", ephemeral=True)
             return
-        if not getattr(self, "selected_reason", None):
+        if not self.selected_reason:
             await interaction.response.send_message(
                 "⚠️ **Feedback Required:** Please select what didn't satisfy you from the dropdown above before regenerating, so the AI knows what to adjust!",
                 ephemeral=True
@@ -160,13 +346,18 @@ class PostRejectionRecoveryView(View):
 
         await interaction.response.defer()
 
-        # Adapt generation parameters based on user feedback
-        if self.selected_reason == "generic_hook":
-            next_angle = f"INCIDENT POST-MORTEM: When {self.topic.title} failed under sudden 100x traffic surge at 3 AM."
-            next_q = "What is the single most common failure mode your team monitors for in production?"
-        else:
-            next_angle = self.topic.angles[1].text if len(self.topic.angles) > 1 else self.topic.angles[0].text
-            next_q = self.topic.questions[1] if len(self.topic.questions) > 1 else self.topic.questions[0]
+        # Build refined parameters
+        label_map = {
+            "generic_hook": "Incident post-mortem: When system failed under sudden 100x surge at 3 AM",
+            "irrelevant_diagram": f"Domain-accurate topology and specimens for {self.topic.title}",
+            "visual_style": "High-contrast clean architecture topology",
+            "too_complex": "Bite-sized isolated mental model",
+            "wrong_failure": "Accurate production failure mode and degradation timeline",
+        }
+        reason_desc = label_map.get(self.selected_reason, self.selected_reason)
+
+        next_angle = self.selected_angle or (self.topic.angles[1].text if len(self.topic.angles) > 1 else self.topic.angles[0].text)
+        next_q = self.topic.questions[1] if len(self.topic.questions) > 1 else self.topic.questions[0]
 
         CHANNEL_PENDING_APPROVAL[interaction.channel_id] = {"path": None, "type": self.prev_format}
         asyncio.create_task(
@@ -175,7 +366,9 @@ class PostRejectionRecoveryView(View):
                 topic=self.topic,
                 angle_content=next_angle,
                 senior_question=next_q,
-                format_type=self.prev_format
+                format_type=self.prev_format,
+                feedback=f"{reason_desc} | Slide Count: {self.selected_slides}",
+                slide_count=self.selected_slides,
             )
         )
 
@@ -190,22 +383,6 @@ class PostRejectionRecoveryView(View):
         view = TopicSelectionView()
         await interaction.response.send_message(content=view.get_message_content(), view=view, ephemeral=False)
 
-    async def ai_discover_callback(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        from src.agents.strategist import ContentStrategistAgent
-        strategist = ContentStrategistAgent()
-        trending = strategist.discover_trending_topics(count=3)
-        cards = [
-            f"**{i}️⃣ {t.get('title', 'Topic')}**\n• *Why it works:* {t.get('tagline', '')}\n• *Incident Hook:* \"{t.get('hook', '')}\""
-            for i, t in enumerate(trending, 1)
-        ]
-        from src.bot.views import TrendingTopicsActionView
-        action_view = TrendingTopicsActionView(trending)
-        await interaction.channel.send(
-            content=f"🔥 **Top 1% Bite-Sized Visual Architecture Topics:**\n\n" + "\n\n".join(cards) + "\n\n👉 *Tap below to generate for Topic #1 or choose format:*",
-            view=action_view
-        )
-
 
 class PostApprovalView(View):
     """
@@ -219,7 +396,8 @@ class PostApprovalView(View):
         topic: Optional[Topic] = None,
         angle_content: str = "",
         senior_question: str = "",
-        format_type: str = "diagram"
+        format_type: str = "diagram",
+        message: Optional[discord.Message] = None,
     ):
         super().__init__(timeout=86400) # 24h expiration
         self.channel_id = channel_id
@@ -229,6 +407,7 @@ class PostApprovalView(View):
         self.angle_content = angle_content
         self.senior_question = senior_question
         self.format_type = format_type
+        self.message = message
 
     @discord.ui.button(label="Approve & Post to LinkedIn", style=discord.ButtonStyle.green, emoji="🚀", row=0)
     async def approve_button(self, interaction: discord.Interaction, button: Button):
@@ -253,7 +432,6 @@ class PostApprovalView(View):
         for child in self.children:
             child.disabled = True
 
-        # 1. Strip all attachments so the PDF cannot be viewed or downloaded
         try:
             await interaction.response.edit_message(
                 content="🗑️ **Draft Rejected & Discarded.** Attachments removed from chat and storage. Channel unlocked.",
@@ -263,7 +441,6 @@ class PostApprovalView(View):
         except Exception:
             pass
 
-        # 2. Delete the rejected draft message completely from chat if supported
         if hasattr(interaction, "message") and interaction.message:
             try:
                 delete_fn = getattr(interaction.message, "delete", None)
@@ -272,7 +449,6 @@ class PostApprovalView(View):
             except Exception:
                 pass
 
-        # Launch Post-Rejection Recovery Flow
         if hasattr(interaction, "channel") and interaction.channel:
             recovery_view = PostRejectionRecoveryView(
                 topic=self.topic,
@@ -287,6 +463,22 @@ class PostApprovalView(View):
                 )
             except Exception:
                 pass
+
+    @discord.ui.button(label="Refine & Pivot (Modal)", style=discord.ButtonStyle.secondary, emoji="✏️", row=0)
+    async def refine_button(self, interaction: discord.Interaction, button: Button):
+        if not self.topic:
+            await interaction.response.send_message("No topic active.", ephemeral=True)
+            return
+
+        modal = RejectionConsultationModal(
+            topic=self.topic,
+            file_path=self.file_path,
+            format_type=self.format_type,
+            angle_content=self.angle_content,
+            senior_question=self.senior_question,
+            message=interaction.message or self.message,
+        )
+        await interaction.response.send_modal(modal)
 
     async def on_timeout(self):
         CHANNEL_PENDING_APPROVAL.pop(self.channel_id, None)
@@ -485,7 +677,9 @@ async def deliver_post_package(
     format_type: str = "video",
     custom_hook: Optional[str] = None,
     animation_id: Optional[str] = None,
-    progress_msg: Optional[discord.Message] = None
+    progress_msg: Optional[discord.Message] = None,
+    feedback: Optional[str] = None,
+    slide_count: Optional[int] = None,
 ):
     """
     Renders and sends the complete LinkedIn package to the Discord channel
@@ -561,7 +755,7 @@ async def deliver_post_package(
                 "view": approval_view
             }
 
-            await channel.send(
+            draft_msg = await channel.send(
                 content=(
                     f"**YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
                     f"────────────────────────────────────────\n"
@@ -574,6 +768,7 @@ async def deliver_post_package(
                 file=v_file,
                 view=approval_view
             )
+            approval_view.message = draft_msg
 
             # Standalone thumbnail
             thumb_path = topic.thumb_path or generate_technical_diagram(topic.id, topic.title, topic.tagline)
@@ -596,7 +791,11 @@ async def deliver_post_package(
                     topic_id=f"{topic.id}_{unique_id}",
                     title=topic.title,
                     output_dir=DRAFTS_DIR,
-                    overwrite=True
+                    overwrite=True,
+                    slide_count=slide_count,
+                    angle_content=angle_content,
+                    senior_question=senior_question,
+                    feedback=feedback,
                 )
                 pdf_path = res["pdf"]
                 cover_path = res.get("cover")
@@ -649,7 +848,7 @@ async def deliver_post_package(
                 "view": approval_view
             }
 
-            await channel.send(
+            draft_msg = await channel.send(
                 content=(
                     f"**YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
                     f"────────────────────────────────────────\n"
@@ -661,6 +860,7 @@ async def deliver_post_package(
                 file=pdf_file,
                 view=approval_view
             )
+            approval_view.message = draft_msg
             await _update_progress(3, 3, "Complete: Carousel draft ready for review.")
         else:
             # Technical architecture diagram delivery
@@ -693,7 +893,7 @@ async def deliver_post_package(
                 "view": approval_view
             }
 
-            await channel.send(
+            draft_msg = await channel.send(
                 content=(
                     f"**YOUR READY-TO-POST LINKEDIN PACKAGE**\n"
                     f"────────────────────────────────────────\n"
@@ -705,6 +905,7 @@ async def deliver_post_package(
                 file=t_file,
                 view=approval_view
             )
+            approval_view.message = draft_msg
             await _update_progress(3, 3, "Complete: Diagram draft ready for review.")
     except Exception as e:
         CHANNEL_PENDING_APPROVAL.pop(channel.id, None)

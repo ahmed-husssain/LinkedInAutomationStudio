@@ -110,3 +110,53 @@ def test_generate_carousel_async_3_and_5_slides(tmp_path):
         assert res3["total_slides"] == 3
 
     asyncio.run(_run())
+
+
+def test_jwt_revocation_carousel_slides():
+    """Verifies that JWT topic produces JWT-specific slides and eliminates unrelated Kafka/Postgres boilerplate."""
+    slides = build_adaptive_slides(
+        topic_id="jwt_vs_sessions",
+        title="The JWT Revocation Dilemma: Stateless Auth Myth",
+        slide_count=4
+    )
+    assert len(slides) == 4
+
+    # Slide 1: Auth overhead and stateless myth
+    assert "JWT" in slides[0]["title"]
+    assert "RS256" in slides[0]["stage_html"]
+
+    # Slide 2: jwt_revocation.log specimen, NOT postgres_lockup.log
+    assert "jwt_revocation.log" in slides[1]["stage_html"]
+    assert "postgres_lockup.log" not in slides[1]["stage_html"]
+
+    # Slide 3: Token Families & Redis blocklist, NOT Kafka Partitions
+    assert "Token Families" in slides[2]["stage_html"]
+    assert "Kafka Partitions" not in slides[2]["stage_html"]
+
+    # Slide 4: Token family invalidation
+    assert "Token Family Invalidation" in slides[3]["stage_html"]
+
+
+def test_carousel_feedback_incorporation():
+    """Verifies that feedback directly alters slide content and that regenerated slides are not identical."""
+    s_original = build_adaptive_slides(
+        topic_id="jwt_vs_sessions",
+        title="The JWT Revocation Dilemma",
+        slide_count=4
+    )
+    custom_feedback = "Focus on RS256 token rotation and Redis Bloom filters"
+    s_refined = build_adaptive_slides(
+        topic_id="jwt_vs_sessions",
+        title="The JWT Revocation Dilemma",
+        slide_count=4,
+        feedback=custom_feedback
+    )
+
+    # Must not be identical
+    assert s_original != s_refined
+
+    # Refined slide must include the custom feedback adjustment
+    assert "User Feedback Adjustment" in s_refined[0]["stage_html"]
+    assert custom_feedback in s_refined[0]["stage_html"]
+    assert custom_feedback in s_refined[3]["stage_html"]
+

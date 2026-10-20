@@ -6,6 +6,7 @@ Zero added dependencies; uses Playwright Chromium with native Pillow fallback.
 """
 
 import os
+import re
 import asyncio
 import logging
 from pathlib import Path
@@ -84,11 +85,265 @@ def resolve_carousel_slide_count(
     return 4
 
 
+def resolve_topic_profile(
+    topic_id: str,
+    title: str,
+    angle_content: Optional[str] = None,
+    feedback: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Resolves domain-accurate architectural specs, failure logs, and topologies
+    for any topic in the topic pool or custom AI topic.
+    """
+    base_id = re.sub(r"_\d{9,}$", "", (topic_id or "").lower()).strip()
+    clean_title = (title or topic_id or "Distributed Architecture").strip()
+    lookup = f"{base_id} {clean_title.lower()} {(angle_content or '').lower()}"
+
+    # Default profile for unknown or generic topics
+    profile = {
+        "title": clean_title,
+        "subtitle": "How staff engineers design zero-downtime distributed systems under extreme load.",
+        "kpi_1": ("SCALE TARGET", "150k req/s"),
+        "kpi_2": ("AVAILABILITY", "99.999% SLA"),
+        "kpi_3": ("DATA DRIFT", "0% Loss"),
+        "bottleneck_title": "Cascading Contention",
+        "bottleneck_sub": "Why synchronous shared-state writes bring down downstream microservices.",
+        "fail_pattern": "Synchronous RPC calls queue up behind unindexed database row-locks. Connection pools exhaust within 8 seconds.",
+        "specimen_file": f"{base_id or 'incident'}_lockup.log",
+        "specimen_body": "[FATAL] remaining connection slots are reserved for non-replication superuser connections<br>[ALERT] thread pool starved: 512/512 active workers blocked",
+        "fail_timeline": "p99 latency jumps from 18ms to 4,850ms. Health checks fail, triggering an accidental thundering herd restart loop.",
+        "solution_title": "Decoupled Event Streams",
+        "solution_sub": "Replacing synchronous lock contention with partitioned queue buffers and read replicas.",
+        "topology": {
+            "ingress_label": "Edge Gateway",
+            "ingress_metric": "50k rps",
+            "worker_label": "Stateless Workers",
+            "worker_metric": "Autoscaling",
+            "queue_label": "Buffer Stream",
+            "queue_metric": "16 Partitions",
+            "store_label": "Read Replicas",
+            "store_metric": "p99 4.2ms",
+        },
+        "invariant": "Writes buffer safely into partitions; read replicas serve p99 queries in under 5ms without table locking.",
+        "rule_1": ("Enforce Timeout Budgets", "Apply jittered exponential backoffs on all downstream RPC calls."),
+        "rule_2": ("Partition by High-Cardinality Keys", "Prevent hot partitions and rebalance overhead under sudden traffic surges."),
+        "gain": "Decoupled throughput; failure isolation across all downstream services.",
+        "cost": "Requires handling eventual consistency and asynchronous out-of-order retries.",
+        "seq_steps": ["Request Ingress", "Buffer Stream", "Worker Processing", "Atomic Store Write", "Async Client ACK"],
+        "sysctl_file": "/etc/sysctl.conf",
+        "sysctl_body": "fs.file-max = 2097152<br>net.ipv4.tcp_max_syn_backlog = 65536<br>net.core.somaxconn = 65535<br>net.ipv4.tcp_rmem = 4096 87380 16777216",
+        "metric_1": ("p99 LATENCY", "4.2ms (STABLE)"),
+        "metric_2": ("DEPLOYMENT SAFETY", "Zero-Downtime Blue/Green"),
+    }
+
+    # 1. JWT Revocation & Stateless Auth Myth
+    if any(k in lookup for k in ["jwt", "token", "session", "revocation"]):
+        profile.update({
+            "title": "The JWT Revocation Dilemma",
+            "subtitle": "Why revoking a compromised token forces you back to Redis state anyway.",
+            "kpi_1": ("AUTH OVERHEAD", "O(1) Local RS256"),
+            "kpi_2": ("REVOCATION", "15m Blindspot"),
+            "kpi_3": ("REPLAY DEFENSE", "Token Families"),
+            "bottleneck_title": "The 15-Minute Blindspot",
+            "bottleneck_sub": "Why compromised bearer tokens bypass edge gateways until TTL expiry.",
+            "fail_pattern": "A compromised JWT bearer token continues authorizing high-privilege API mutations until TTL expiration, with zero gateway rejection.",
+            "specimen_file": "jwt_revocation.log",
+            "specimen_body": "[SEC_ALERT] Reused refresh_token detected for user_id=8842<br>[REVOCATION_BLINDSPOT] Stolen access_token valid for 14m18s across 18 edge services",
+            "fail_timeline": "Immediate revocation requires a centralized blocklist—re-introducing the exact Redis bottleneck JWTs were chosen to eliminate.",
+            "solution_title": "Ephemeral Access + Rotating Refresh",
+            "solution_sub": "5-minute short-lived RS256 tokens paired with stateful Redis token families.",
+            "topology": {
+                "ingress_label": "Edge Gateway",
+                "ingress_metric": "RS256 Verify",
+                "worker_label": "Microservices",
+                "worker_metric": "Local Parse",
+                "queue_label": "Redis Blocklist",
+                "queue_metric": "Revocation Bloom",
+                "store_label": "Token Families",
+                "store_metric": "Redis Cluster",
+            },
+            "invariant": "Access tokens live for 5 minutes max; refresh token rotation detects reuse instantly and revokes the entire token family.",
+            "rule_1": ("Cap Access TTL at 5 Minutes", "Minimize the compromise window without hammering central auth servers on every RPC."),
+            "rule_2": ("Token Family Invalidation", "If an expired or consumed refresh token is replayed, immediately invalidate all child tokens in Redis."),
+            "gain": "Sub-millisecond local RS256 verification across 100+ services without central DB hits.",
+            "cost": "Requires maintaining a Redis revocation set or Bloom filter for immediate session termination.",
+            "seq_steps": ["User Auth (POST /token)", "Issue RS256 (5m TTL)", "Local Signature Verify", "Refresh Token Replay", "Cascade Invalidation"],
+            "sysctl_file": "auth_policy.json",
+            "sysctl_body": "{\\n  \\\"jwt_access_ttl_seconds\\\": 300,\\n  \\\"refresh_token_ttl_seconds\\\": 604800,\\n  \\\"rotate_refresh_tokens\\\": true,\\n  \\\"revoke_token_family_on_reuse\\\": true\\n}",
+            "metric_1": ("REVOCATION LATENCY", "< 1ms in Redis"),
+            "metric_2": ("CRYPTO ALGORITHM", "RS256 Asymmetric"),
+        })
+
+    # 2. OAuth 2.0 & PKCE
+    elif any(k in lookup for k in ["oauth", "pkce"]):
+        profile.update({
+            "title": "OAuth 2.0 & PKCE Security",
+            "subtitle": "Why public clients cannot hold secrets and why PKCE is mandatory.",
+            "kpi_1": ("CLIENT TYPE", "Public / Mobile"),
+            "kpi_2": ("VERIFIER", "SHA-256 S256"),
+            "kpi_3": ("REPLAY RISK", "One-Time Code"),
+            "bottleneck_title": "Secret Decompilation & Interception",
+            "bottleneck_sub": "Why mobile apps and SPAs cannot keep client secrets safe.",
+            "fail_pattern": "Mobile apps decompiled by attackers reveal hardcoded client secrets, enabling authorization code interception attacks.",
+            "specimen_file": "auth_intercept.log",
+            "specimen_body": "[SEC_WARN] Auth code interception detected on custom URI scheme<br>[FAIL] Client secret decompiled from Android APK binary",
+            "fail_timeline": "Malicious apps registered to custom URI schemes steal auth codes and impersonate users.",
+            "solution_title": "Dynamic PKCE Code Exchange",
+            "solution_sub": "Binding one-time authorization codes with dynamic SHA-256 verifiers.",
+            "topology": {
+                "ingress_label": "Mobile / SPA",
+                "ingress_metric": "code_challenge",
+                "worker_label": "Auth Server",
+                "worker_metric": "code_verifier",
+                "queue_label": "Token Exchange",
+                "queue_metric": "One-Time Code",
+                "store_label": "Resource Server",
+                "store_metric": "Scoped Bearer",
+            },
+            "invariant": "PKCE dynamically binds authorization codes to the client using cryptographic code verifiers and SHA-256 challenges.",
+            "rule_1": ("Mandate PKCE on All Public Clients", "Never embed client secrets in browser single-page apps or mobile bundles."),
+            "rule_2": ("Single-Use Authorization Codes", "Expire authorization codes within 60 seconds and reject any reused codes immediately."),
+            "gain": "100% immune to authorization code interception without requiring embedded secrets.",
+            "cost": "Requires cryptographic SHA-256 hashing and additional token exchange latency.",
+            "seq_steps": ["Generate Code Verifier", "SHA-256 Challenge Sent", "User Login & Consent", "Auth Code Returned", "Exchange with Verifier"],
+            "sysctl_file": "pkce_policy.json",
+            "sysctl_body": "{\\n  \\\"code_challenge_method\\\": \\\"S256\\\",\\n  \\\"auth_code_ttl_seconds\\\": 60,\\n  \\\"allow_plain_challenge\\\": false,\\n  \\\"strict_redirect_uri\\\": true\\n}",
+            "metric_1": ("CHALLENGE METHOD", "SHA-256 (S256)"),
+            "metric_2": ("SECRET EXPOSURE", "0% Secrets in App"),
+        })
+
+    # 3. Rate Limiter (Token Bucket)
+    elif any(k in lookup for k in ["rate_limit", "token_bucket", "leaky_bucket", "bucket"]):
+        profile.update({
+            "title": "Token Bucket: Surviving Traffic Bursts",
+            "subtitle": "Permitting legitimate bursts while dropping abusive traffic in under 2ms.",
+            "kpi_1": ("REFILL RATE", "Steady +1/s"),
+            "kpi_2": ("BURST CAPACITY", "Instant Peak"),
+            "kpi_3": ("TAIL OVERHEAD", "< 2ms Redis Lua"),
+            "bottleneck_title": "Boundary Double-Spikes & Starvation",
+            "bottleneck_sub": "Why fixed windows allow 2x traffic surges at minute boundaries.",
+            "fail_pattern": "Fixed window rate limiters allow double-limit boundary spikes (e.g. 100 requests at 0:59 and 100 at 1:01), overloading downstream DBs.",
+            "specimen_file": "rate_limit_breach.log",
+            "specimen_body": "[HTTP 429] 10,000 req/s surge exceeded quota for client_id=stripe_live<br>[DROP] Throttled 8,420 unbuffered requests at API edge",
+            "fail_timeline": "Synchronous unthrottled traffic spikes exhaust connection pools within 2 seconds, triggering cascading 504 gateway timeouts.",
+            "solution_title": "Atomic In-Memory Token Bucket",
+            "solution_sub": "Continuous steady refill with single-roundtrip Redis Lua scripts.",
+            "topology": {
+                "ingress_label": "Envoy Gateway",
+                "ingress_metric": "100k rps",
+                "worker_label": "Rate Limiter",
+                "worker_metric": "Atomic Lua",
+                "queue_label": "Redis Token Bucket",
+                "queue_metric": "TTL Keys",
+                "store_label": "Protected DB",
+                "store_metric": "Nominal 200 OK",
+            },
+            "invariant": "Tokens refill continuously at a deterministic rate; requests consume tokens instantly without database lock contention.",
+            "rule_1": ("Enforce Atomic Lua Evaluation", "Never run separate INCR and EXPIRE commands to prevent race conditions during traffic spikes."),
+            "rule_2": ("Send Jittered Retry Headers", "Always return Retry-After with randomized jitter to prevent client retry thundering herds."),
+            "gain": "Protects backend infrastructure from DDOS while transparently supporting bursty user traffic.",
+            "cost": "Adds sub-2ms Redis roundtrip to each ingress request and requires memory per active rate limit key.",
+            "seq_steps": ["Request Hits Gateway", "Redis Lua Token Check", "Token Available? Decr", "Quota Exceeded -> 429", "Async Refill Background"],
+            "sysctl_file": "rate_limit.lua",
+            "sysctl_body": "local key = KEYS[1]\\nlocal capacity = tonumber(ARGV[1])\\nlocal current = tonumber(redis.call('get', key) or capacity)\\nif current > 0 then\\n  redis.call('decr', key)\\n  return 1\\nelse\\n  return 0\\nend",
+            "metric_1": ("EVALUATION TIME", "< 1.8ms Redis Lua"),
+            "metric_2": ("BURST TOLERANCE", "100% Burst Safe"),
+        })
+
+    # 4. Postgres B-Tree vs UUIDv4 / UUIDv7
+    elif any(k in lookup for k in ["sql_index", "btree", "uuid", "uuidv4", "uuidv7"]):
+        profile.update({
+            "title": "Postgres B-Trees vs Random UUIDs",
+            "subtitle": "Random 128-bit page splits and cache thrashing vs sequential UUIDv7.",
+            "kpi_1": ("KEY LOCALITY", "Random 128-bit"),
+            "kpi_2": ("PAGE SPLIT RATE", "50% on Insert"),
+            "kpi_3": ("CACHE HIT RATIO", "Drops 99% -> 62%"),
+            "bottleneck_title": "B-Tree Page Split Amplification",
+            "bottleneck_sub": "Why random 128-bit UUID inserts thrash disk buffer pools.",
+            "fail_pattern": "UUIDv4 values are uniformly random across 128 bits, forcing Postgres to insert into random B-Tree leaf pages across gigabytes of disk.",
+            "specimen_file": "postgres_io_stall.log",
+            "specimen_body": "[IO_STALL] Buffer pool miss: page split on btree leaf pg_catalog.idx_orders_uuid<br>[WARN] Random disk seek read latency spiked to 48.2ms",
+            "fail_timeline": "As the index exceeds RAM buffer pool size, every insert triggers a random disk seek and expensive 50% B-Tree page splits.",
+            "solution_title": "Time-Ordered Sequential UUIDv7",
+            "solution_sub": "Preserving global uniqueness with append-only leaf page locality.",
+            "topology": {
+                "ingress_label": "App Mutations",
+                "ingress_metric": "Insert UUID",
+                "worker_label": "Postgres Engine",
+                "worker_metric": "B-Tree Walker",
+                "queue_label": "WAL Buffer",
+                "queue_metric": "Sequential Log",
+                "store_label": "B-Tree Leaf Pages",
+                "store_metric": "UUIDv7 Append",
+            },
+            "invariant": "Time-ordered UUIDv7 keys preserve uniqueness while ensuring append-only locality at the right edge of B-Tree pages.",
+            "rule_1": ("Switch to UUIDv7 or ULID", "Embed millisecond timestamps in primary keys to eliminate random B-Tree page fragmentation."),
+            "rule_2": ("Tune Index Fillfactor to 85", "Reserve headroom inside B-Tree pages for concurrent page growth without cascading splits."),
+            "gain": "10x faster insert throughput and 80% reduction in disk I/O write amplification.",
+            "cost": "Timestamp exposure in primary key reveals creation time (use separate surrogate key if creation time is sensitive).",
+            "seq_steps": ["Generate UUIDv7 (ms TS)", "App Ingestion Pipeline", "WAL Sequential Write", "Right-Edge BTree Append", "Buffer Cache Retained"],
+            "sysctl_file": "postgres_btree.sql",
+            "sysctl_body": "-- Benchmark: UUIDv7 vs UUIDv4 B-Tree Fragmentation\\nCREATE EXTENSION IF NOT EXISTS pgcrypto;\\n-- UUIDv7 preserves sequential append locality\\nALTER TABLE orders ALTER COLUMN id SET DEFAULT uuid_generate_v7();",
+            "metric_1": ("INSERT THROUGHPUT", "10x Faster Append"),
+            "metric_2": ("BUFFER HIT RATIO", "99.4% in RAM"),
+        })
+
+    # 5. WebSockets & C10M Concurrency
+    elif any(k in lookup for k in ["websocket", "socket", "10m", "c10m"]):
+        profile.update({
+            "title": "10 Million Sockets: Scaling WebSockets",
+            "subtitle": "Epoll event loops, memory footprints (2.4KB vs 2MB), and reconnect storms.",
+            "kpi_1": ("SCALE TARGET", "10M Sockets"),
+            "kpi_2": ("RAM / SOCKET", "2.4 KB Pool"),
+            "kpi_3": ("THROUGHPUT", "1.5M msg/s"),
+            "bottleneck_title": "Kernel & Thread Collapse",
+            "bottleneck_sub": "Why thread-per-connection blocking models collapse under scale.",
+            "fail_pattern": "Operating system threads allocate 2MB stack space per connection. 100k threads demand 200GB RAM, triggering OOM-killer.",
+            "specimen_file": "kernel_panic.log",
+            "specimen_body": "[ERR_FD_EXHAUSTED] accept(): too many open files (max=65535)<br>[OOM_KILLER] Invoked oom-killer: gfp_mask=0x100cca(GFP_HIGHUSER)",
+            "fail_timeline": "p99 latency spikes from 12ms to 6,200ms. Keepalive probes timeout, generating a recursive reconnect avalanche.",
+            "solution_title": "Decoupled Epoll Event Mesh",
+            "solution_sub": "Stateless epoll connection workers connected via partitioned stream buffers.",
+            "topology": {
+                "ingress_label": "L4 Proxy (IP Hash)",
+                "ingress_metric": "1M rps",
+                "worker_label": "Epoll Edge Tier",
+                "worker_metric": "10M Conns",
+                "queue_label": "Partitioned Bus",
+                "queue_metric": "64 Partitions",
+                "store_label": "Raft Store",
+                "store_metric": "p99 3.2ms",
+            },
+            "invariant": "Workers register socket file descriptors with non-blocking epoll event loops, reducing memory from 2MB to 2.4KB per socket.",
+            "rule_1": ("Set ulimit -n 1048576", "Prevent default Linux 1024 file descriptor exhaustion on socket creation."),
+            "rule_2": ("Enforce Heartbeat Jitter", "Stagger ping/pong intervals by +/- 20% to avoid synchronized heartbeat bursts."),
+            "gain": "100x Concurrency density; sub-5ms broadcast to 10M subscribers.",
+            "cost": "Requires strict TCP socket buffer tuning and partitioned backpressure buffers.",
+            "seq_steps": ["TCP SYN Handshake", "HTTP 101 Upgrade", "Epoll Registration", "Pub/Sub Broadcast", "Client Frame ACK"],
+            "sysctl_file": "/etc/sysctl.conf",
+            "sysctl_body": "fs.file-max = 2097152<br>net.ipv4.tcp_max_syn_backlog = 65536<br>net.core.somaxconn = 65535<br>net.ipv4.tcp_rmem = 4096 87380 16777216",
+            "metric_1": ("RESTORED p99 LATENCY", "3.2ms (STABLE)"),
+            "metric_2": ("MEMORY PER SOCKET", "2.4 KB (-99.8%)"),
+        })
+
+    # Apply user feedback customization if provided
+    if feedback:
+        fb_clean = feedback.strip()
+        profile["rule_1"] = (f"Refined Constraint: {fb_clean[:32]}", f"Addressed user architectural feedback: {fb_clean}")
+        profile["feedback_note"] = fb_clean
+
+    return profile
+
+
 def build_adaptive_slides(
     topic_id: str,
     title: str,
     slide_count: Optional[int] = None,
     accent: str = "#38bdf8",
+    angle_content: Optional[str] = None,
+    senior_question: Optional[str] = None,
+    feedback: Optional[str] = None,
+    custom_instructions: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
     Builds a high-density, publication-grade carousel narrative strictly
@@ -98,50 +353,67 @@ def build_adaptive_slides(
     count = slide_count or resolve_carousel_slide_count(topic_id, title)
     count = max(3, min(5, count))
 
+    effective_feedback = feedback or custom_instructions
+    profile = resolve_topic_profile(topic_id, title, angle_content=angle_content, feedback=effective_feedback)
+    topic_title = profile.get("title", clean_title)
+    topic_sub = profile.get("subtitle", "")
+
+    topo = profile["topology"]
+
+    feedback_html = ""
+    if profile.get("feedback_note"):
+        feedback_html = f"""
+        <div class="narrative-block highlight" style="border-color: #10b981; background: rgba(16, 185, 129, 0.08);">
+          <span class="block-tag" style="color: #10b981;">User Feedback Adjustment</span>
+          <p class="block-text">{profile['feedback_note']}</p>
+        </div>
+        """
+
     if count == 3:
         return [
             {
                 "slide_number": 1,
                 "badge": "MENTAL MODEL 101",
-                "title": clean_title,
-                "subtitle": "How staff engineers reason about this core building block in high-scale systems.",
+                "title": topic_title,
+                "subtitle": topic_sub,
                 "stage_html": f"""
                 <div class="scale-matrix">
-                  <div class="scale-kpi"><span class="scale-kpi-label">CONCURRENCY</span><span class="scale-kpi-val">Lock-Free</span></div>
-                  <div class="scale-kpi"><span class="scale-kpi-label">OVERHEAD</span><span class="scale-kpi-val">O(1) Memory</span></div>
-                  <div class="scale-kpi"><span class="scale-kpi-label">FAILURE RISK</span><span class="scale-kpi-val">Zero-Downtime</span></div>
+                  <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_1'][0]}</span><span class="scale-kpi-val">{profile['kpi_1'][1]}</span></div>
+                  <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_2'][0]}</span><span class="scale-kpi-val">{profile['kpi_2'][1]}</span></div>
+                  <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_3'][0]}</span><span class="scale-kpi-val">{profile['kpi_3'][1]}</span></div>
                 </div>
+                {feedback_html}
                 <div class="narrative-block highlight">
                   <span class="block-tag">Core Principle</span>
-                  <p class="block-text">Isolating state changes prevents global lock contention while preserving deterministic execution under load.</p>
+                  <p class="block-text">{profile['invariant']}</p>
                 </div>
                 <div class="config-specimen">
-                  <div class="specimen-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="specimen-title">invariant_spec.go</span></div>
-                  <div class="specimen-body">// Invariant: Atomically swap without mutex lock contention<br>atomic.CompareAndSwapUint64(&counter, oldVal, newVal)</div>
+                  <div class="specimen-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="specimen-title">{profile['specimen_file']}</span></div>
+                  <div class="specimen-body">{profile['specimen_body']}</div>
                 </div>
                 """,
-                "metric_1_label": "SLA GUARANTEE",
-                "metric_1_val": "99.99% Nominal",
-                "metric_2_label": "EFFICIENCY",
-                "metric_2_val": "100% Deterministic",
+                "metric_1_label": profile['kpi_1'][0],
+                "metric_1_val": profile['kpi_1'][1],
+                "metric_2_label": profile['kpi_2'][0],
+                "metric_2_val": profile['kpi_2'][1],
                 "swipe_hint": "Swipe for Mechanism →",
             },
             {
                 "slide_number": 2,
                 "badge": "ARCHITECTURE & MECHANISM",
-                "title": "Under-the-Hood Mechanism",
-                "subtitle": "Step-by-step state transition and distributed dataflow topology.",
+                "title": f"The Mechanism: {profile['solution_title']}",
+                "subtitle": profile['solution_sub'],
                 "stage_html": f"""
-                {render_full_width_topology(width=880, height=220, ingress_label="Ingress", worker_label="Worker Tier", queue_label="Buffer Stream", store_label="State Store", accent=accent)}
+                {render_full_width_topology(width=880, height=220, ingress_label=topo['ingress_label'], ingress_metric=topo.get('ingress_metric'), worker_label=topo['worker_label'], worker_metric=topo.get('worker_metric'), queue_label=topo['queue_label'], queue_metric=topo.get('queue_metric'), store_label=topo['store_label'], store_metric=topo.get('store_metric'), accent=accent)}
                 <div class="narrative-block highlight">
                   <span class="block-tag">Architectural Invariant</span>
-                  <p class="block-text">In-memory state transitions execute in sub-millisecond cycles without triggering disk I/O bottlenecks.</p>
+                  <p class="block-text">{profile['invariant']}</p>
                 </div>
                 """,
-                "metric_1_label": "p99 LATENCY",
-                "metric_1_val": "< 2.5ms Global",
-                "metric_2_label": "STATE DRIFT",
-                "metric_2_val": "0% Packet Loss",
+                "metric_1_label": profile['metric_1'][0],
+                "metric_1_val": profile['metric_1'][1],
+                "metric_2_label": profile['metric_2'][0],
+                "metric_2_val": profile['metric_2'][1],
                 "swipe_hint": "Swipe for Production Rules →",
             },
             {
@@ -152,21 +424,21 @@ def build_adaptive_slides(
                 "stage_html": f"""
                 <div class="playbook-card">
                   <span class="playbook-num">RULE 1</span>
-                  <div class="playbook-content"><span class="playbook-title">Set Strict Timeout Budgets</span><span class="playbook-sub">Enforce client-side deadlines with exponential backoff and jitter.</span></div>
+                  <div class="playbook-content"><span class="playbook-title">{profile['rule_1'][0]}</span><span class="playbook-sub">{profile['rule_1'][1]}</span></div>
                 </div>
                 <div class="playbook-card">
                   <span class="playbook-num">RULE 2</span>
-                  <div class="playbook-content"><span class="playbook-title">Measure Tail Latencies (p99)</span><span class="playbook-sub">Averages hide tail-end connection starvation and thundering herds.</span></div>
+                  <div class="playbook-content"><span class="playbook-title">{profile['rule_2'][0]}</span><span class="playbook-sub">{profile['rule_2'][1]}</span></div>
                 </div>
                 <div class="tradeoff-grid">
-                  <div class="tradeoff-card gain"><span class="tradeoff-tag" style="color: #10b981;">ARCHITECTURAL GAIN</span><span class="tradeoff-text">10x Concurrency with O(1) state lookup</span></div>
-                  <div class="tradeoff-card cost"><span class="tradeoff-tag" style="color: #f59e0b;">KNOWN TRADE-OFF</span><span class="tradeoff-text">Memory overhead scales linearly with active keys</span></div>
+                  <div class="tradeoff-card gain"><span class="tradeoff-tag" style="color: #10b981;">ARCHITECTURAL GAIN</span><span class="tradeoff-text">{profile['gain']}</span></div>
+                  <div class="tradeoff-card cost"><span class="tradeoff-tag" style="color: #f59e0b;">KNOWN TRADE-OFF</span><span class="tradeoff-text">{profile['cost']}</span></div>
                 </div>
                 """,
-                "metric_1_label": "DEPLOYMENT SAFETY",
-                "metric_1_val": "Safe Rolling",
-                "metric_2_label": "OBSERVABILITY",
-                "metric_2_val": "100% Traced",
+                "metric_1_label": profile['metric_1'][0],
+                "metric_1_val": profile['metric_1'][1],
+                "metric_2_label": profile['metric_2'][0],
+                "metric_2_val": profile['metric_2'][1],
                 "swipe_hint": "Save & Share for Reference",
             },
         ]
@@ -176,119 +448,120 @@ def build_adaptive_slides(
             {
                 "slide_number": 1,
                 "badge": "SCALE BENCHMARK",
-                "title": clean_title,
-                "subtitle": "How staff engineers architect zero-downtime distributed systems under extreme load.",
+                "title": topic_title,
+                "subtitle": topic_sub,
                 "stage_html": f"""
                 <div class="scale-matrix">
-                  <div class="scale-kpi"><span class="scale-kpi-label">SCALE TARGET</span><span class="scale-kpi-val">10M Sockets</span></div>
-                  <div class="scale-kpi"><span class="scale-kpi-label">RAM / SOCKET</span><span class="scale-kpi-val">2.4 KB Pool</span></div>
-                  <div class="scale-kpi"><span class="scale-kpi-label">THROUGHPUT</span><span class="scale-kpi-val">1.5M msg/s</span></div>
+                  <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_1'][0]}</span><span class="scale-kpi-val">{profile['kpi_1'][1]}</span></div>
+                  <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_2'][0]}</span><span class="scale-kpi-val">{profile['kpi_2'][1]}</span></div>
+                  <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_3'][0]}</span><span class="scale-kpi-val">{profile['kpi_3'][1]}</span></div>
                 </div>
+                {feedback_html}
                 <div class="narrative-block highlight">
                   <span class="block-tag">The Core Challenge</span>
-                  <p class="block-text">Standard thread-per-request architectures hit kernel limits and OOM crashes past 50,000 concurrent sockets.</p>
+                  <p class="block-text">{profile['fail_pattern']}</p>
                 </div>
                 <div class="narrative-block">
                   <span class="block-tag">System Blueprint Journey</span>
-                  <p class="block-text">Swipe left to inspect the kernel bottleneck, the epoll mesh, the protocol flow, and the production sysctl runbook.</p>
+                  <p class="block-text">Swipe left to inspect the failure bottleneck, decoupled topology, protocol flow, and production runbook.</p>
                 </div>
                 """,
-                "metric_1_label": "CONCURRENCY TARGET",
-                "metric_1_val": "10,000,000 Active",
-                "metric_2_label": "SLA COMMITMENT",
-                "metric_2_val": "99.999% Global",
+                "metric_1_label": profile['kpi_1'][0],
+                "metric_1_val": profile['kpi_1'][1],
+                "metric_2_label": profile['kpi_2'][0],
+                "metric_2_val": profile['kpi_2'][1],
                 "swipe_hint": "Swipe for Naive Bottleneck →",
             },
             {
                 "slide_number": 2,
                 "badge": "ANATOMY OF FAILURE",
-                "title": "The Bottleneck: Kernel & Thread Collapse",
-                "subtitle": "Why standard blocking I/O models exhaust memory and collapse file descriptors.",
+                "title": f"The Bottleneck: {profile['bottleneck_title']}",
+                "subtitle": profile['bottleneck_sub'],
                 "stage_html": f"""
                 <div class="narrative-block" style="border-color: #ef4444; background: rgba(239, 68, 68, 0.08);">
                   <span class="block-tag" style="color: #ef4444;">Failure Pattern</span>
-                  <p class="block-text">Operating system threads allocate 2MB stack space per connection. 100k threads demand 200GB RAM, triggering OOM-killer.</p>
+                  <p class="block-text">{profile['fail_pattern']}</p>
                 </div>
                 <div class="config-specimen">
-                  <div class="specimen-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="specimen-title">kernel_panic.log</span></div>
-                  <div class="specimen-body">[ERR_FD_EXHAUSTED] accept(): too many open files (max=65535)<br>[OOM_KILLER] Invoked oom-killer: gfp_mask=0x100cca(GFP_HIGHUSER)</div>
+                  <div class="specimen-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="specimen-title">{profile['specimen_file']}</span></div>
+                  <div class="specimen-body">{profile['specimen_body']}</div>
                 </div>
                 <div class="narrative-block" style="border-color: #f59e0b; background: rgba(245, 158, 11, 0.08);">
                   <span class="block-tag" style="color: #f59e0b;">Degradation Timeline</span>
-                  <p class="block-text">p99 latency spikes from 12ms to 6,200ms. Keepalive probes timeout, generating a recursive reconnect avalanche.</p>
+                  <p class="block-text">{profile['fail_timeline']}</p>
                 </div>
                 """,
-                "metric_1_label": "FAILED CONNECTIONS",
-                "metric_1_val": "42.8% HTTP 504",
-                "metric_2_label": "p99 RESPONSE TIME",
-                "metric_2_val": "6,200ms (CRITICAL)",
+                "metric_1_label": "UNHANDLED FAILURE",
+                "metric_1_val": "Critical Alert",
+                "metric_2_label": "p99 IMPACT",
+                "metric_2_val": "Severe Degradation",
                 "swipe_hint": "Swipe for Decoupled Mesh →",
             },
             {
                 "slide_number": 3,
                 "badge": "DISTRIBUTED TOPOLOGY",
-                "title": "The Solution: Decoupled Event Mesh",
-                "subtitle": "Stateless epoll connection workers connected via partitioned stream buffers.",
+                "title": f"The Solution: {profile['solution_title']}",
+                "subtitle": profile['solution_sub'],
                 "stage_html": f"""
-                {render_full_width_topology(width=880, height=220, ingress_label="L4 Proxy (IP Hash)", ingress_metric="1M rps", worker_label="Epoll Edge Tier", worker_metric="10M Conns", queue_label="Partitioned Bus", queue_metric="64 Partitions", store_label="Raft Store", store_metric="p99 3.2ms", accent=accent)}
+                {render_full_width_topology(width=880, height=220, ingress_label=topo['ingress_label'], ingress_metric=topo.get('ingress_metric'), worker_label=topo['worker_label'], worker_metric=topo.get('worker_metric'), queue_label=topo['queue_label'], queue_metric=topo.get('queue_metric'), store_label=topo['store_label'], store_metric=topo.get('store_metric'), accent=accent)}
                 <div class="narrative-block highlight">
                   <span class="block-tag">Architectural Invariant</span>
-                  <p class="block-text">Workers register socket file descriptors with non-blocking epoll event loops, reducing memory from 2MB to 2.4KB per socket.</p>
+                  <p class="block-text">{profile['invariant']}</p>
                 </div>
                 """,
-                "metric_1_label": "RESTORED p99 LATENCY",
-                "metric_1_val": "3.2ms (STABLE)",
-                "metric_2_label": "MEMORY PER SOCKET",
-                "metric_2_val": "2.4 KB (-99.8%)",
+                "metric_1_label": profile['metric_1'][0],
+                "metric_1_val": profile['metric_1'][1],
+                "metric_2_label": profile['metric_2'][0],
+                "metric_2_val": profile['metric_2'][1],
                 "swipe_hint": "Swipe for Protocol Flow →",
             },
             {
                 "slide_number": 4,
                 "badge": "PROTOCOL FLOW & TRADE-OFFS",
                 "title": "Temporal Flow & Senior Trade-Offs",
-                "subtitle": "The complete lifecycle of a real-time message and its architectural costs.",
+                "subtitle": "The complete execution lifecycle and its architectural costs.",
                 "stage_html": f"""
-                {render_sequence_flow_svg(["TCP SYN Handshake", "HTTP 101 Upgrade", "Epoll Registration", "Pub/Sub Broadcast", "Client Frame ACK"], width=880, height=75, accent=accent)}
+                {render_sequence_flow_svg(profile['seq_steps'], width=880, height=75, accent=accent)}
                 <div class="tradeoff-grid">
                   <div class="tradeoff-card gain">
                     <span class="tradeoff-tag" style="color: #10b981;">ARCHITECTURAL GAIN</span>
-                    <span class="tradeoff-text">100x Concurrency density; sub-5ms broadcast to 10M subscribers.</span>
+                    <span class="tradeoff-text">{profile['gain']}</span>
                   </div>
                   <div class="tradeoff-card cost">
                     <span class="tradeoff-tag" style="color: #f59e0b;">OPERATIONAL GOTCHA</span>
-                    <span class="tradeoff-text">Requires strict TCP socket buffer tuning and partitioned backpressure buffers.</span>
+                    <span class="tradeoff-text">{profile['cost']}</span>
                   </div>
                 </div>
                 """,
-                "metric_1_label": "PUBSUB FANOUT",
-                "metric_1_val": "1.2M msgs/sec",
-                "metric_2_label": "BUFFER DROPRATE",
-                "metric_2_val": "0.000% Dropped",
+                "metric_1_label": profile['metric_1'][0],
+                "metric_1_val": profile['metric_1'][1],
+                "metric_2_label": profile['metric_2'][0],
+                "metric_2_val": profile['metric_2'][1],
                 "swipe_hint": "Swipe for Production Runbook →",
             },
             {
                 "slide_number": 5,
                 "badge": "PRODUCTION RUNBOOK",
                 "title": "Staff Engineer Runbook",
-                "subtitle": "Exact kernel parameters and operational rules for production readiness.",
+                "subtitle": "Exact parameters and operational rules for production readiness.",
                 "stage_html": f"""
                 <div class="config-specimen">
-                  <div class="specimen-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="specimen-title">/etc/sysctl.conf</span></div>
-                  <div class="specimen-body">fs.file-max = 2097152<br>net.ipv4.tcp_max_syn_backlog = 65536<br>net.core.somaxconn = 65535<br>net.ipv4.tcp_rmem = 4096 87380 16777216</div>
+                  <div class="specimen-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="specimen-title">{profile['sysctl_file']}</span></div>
+                  <div class="specimen-body">{profile['sysctl_body']}</div>
                 </div>
                 <div class="playbook-card">
                   <span class="playbook-num">RULE 1</span>
-                  <div class="playbook-content"><span class="playbook-title">Set ulimit -n 1048576</span><span class="playbook-sub">Prevent default Linux 1024 file descriptor exhaustion on socket creation.</span></div>
+                  <div class="playbook-content"><span class="playbook-title">{profile['rule_1'][0]}</span><span class="playbook-sub">{profile['rule_1'][1]}</span></div>
                 </div>
                 <div class="playbook-card">
                   <span class="playbook-num">RULE 2</span>
-                  <div class="playbook-content"><span class="playbook-title">Enforce Heartbeat Jitter</span><span class="playbook-sub">Stagger ping/pong intervals by +/- 20% to avoid synchronized heartbeat bursts.</span></div>
+                  <div class="playbook-content"><span class="playbook-title">{profile['rule_2'][0]}</span><span class="playbook-sub">{profile['rule_2'][1]}</span></div>
                 </div>
                 """,
                 "metric_1_label": "RUNBOOK STATUS",
                 "metric_1_val": "Production Ready",
                 "metric_2_label": "RESILIENCE MODEL",
-                "metric_2_val": "Multi-Region Active",
+                "metric_2_val": "Active-Active Verified",
                 "swipe_hint": "Save & Share for Reference",
             },
         ]
@@ -298,46 +571,47 @@ def build_adaptive_slides(
         {
             "slide_number": 1,
             "badge": "SYSTEM ARCHITECTURE",
-            "title": clean_title,
-            "subtitle": "How staff engineers design zero-downtime distributed systems under extreme load.",
+            "title": topic_title,
+            "subtitle": topic_sub,
             "stage_html": f"""
             <div class="scale-matrix">
-              <div class="scale-kpi"><span class="scale-kpi-label">PEAK SCALE</span><span class="scale-kpi-val">150k req/s</span></div>
-              <div class="scale-kpi"><span class="scale-kpi-label">AVAILABILITY</span><span class="scale-kpi-val">99.999% SLA</span></div>
-              <div class="scale-kpi"><span class="scale-kpi-label">DATA DRIFT</span><span class="scale-kpi-val">0% Loss</span></div>
+              <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_1'][0]}</span><span class="scale-kpi-val">{profile['kpi_1'][1]}</span></div>
+              <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_2'][0]}</span><span class="scale-kpi-val">{profile['kpi_2'][1]}</span></div>
+              <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_3'][0]}</span><span class="scale-kpi-val">{profile['kpi_3'][1]}</span></div>
             </div>
+            {feedback_html}
             <div class="narrative-block highlight">
               <span class="block-tag">The Core Challenge</span>
-              <p class="block-text">When traffic spikes 100x, traditional monolithic architectures fail at connection pools and locks.</p>
+              <p class="block-text">{profile['fail_pattern']}</p>
             </div>
             <div class="narrative-block">
               <span class="block-tag">Architectural Blueprint</span>
               <p class="block-text">Swipe left to dissect the failure mode, the decoupled topology, and the staff checklist.</p>
             </div>
             """,
-            "metric_1_label": "PEAK THROUGHPUT",
-            "metric_1_val": "150,000 req/s",
-            "metric_2_label": "TARGET AVAILABILITY",
-            "metric_2_val": "99.999% SLA",
+            "metric_1_label": profile['kpi_1'][0],
+            "metric_1_val": profile['kpi_1'][1],
+            "metric_2_label": profile['kpi_2'][0],
+            "metric_2_val": profile['kpi_2'][1],
             "swipe_hint": "Swipe for Failure Mode →",
         },
         {
             "slide_number": 2,
             "badge": "INCIDENT POST-MORTEM",
-            "title": "The Bottleneck: Cascading Contention",
-            "subtitle": "Why synchronous shared-database writes bring down downstream microservices.",
+            "title": f"The Bottleneck: {profile['bottleneck_title']}",
+            "subtitle": profile['bottleneck_sub'],
             "stage_html": f"""
             <div class="narrative-block" style="border-color: #ef4444; background: rgba(239, 68, 68, 0.08);">
               <span class="block-tag" style="color: #ef4444;">Failure Pattern</span>
-              <p class="block-text">Synchronous RPC calls queue up behind unindexed database row-locks. Connection pools exhaust within 8 seconds.</p>
+              <p class="block-text">{profile['fail_pattern']}</p>
             </div>
             <div class="config-specimen">
-              <div class="specimen-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="specimen-title">postgres_lockup.log</span></div>
-              <div class="specimen-body">[FATAL] remaining connection slots are reserved for non-replication superuser connections<br>[ALERT] thread pool starved: 512/512 active workers blocked</div>
+              <div class="specimen-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="specimen-title">{profile['specimen_file']}</span></div>
+              <div class="specimen-body">{profile['specimen_body']}</div>
             </div>
             <div class="narrative-block" style="border-color: #f59e0b; background: rgba(245, 158, 11, 0.08);">
               <span class="block-tag" style="color: #f59e0b;">Degradation Timeline</span>
-              <p class="block-text">p99 latency jumps from 18ms to 4,850ms. Health checks fail, triggering an accidental thundering herd restart loop.</p>
+              <p class="block-text">{profile['fail_timeline']}</p>
             </div>
             """,
             "metric_1_label": "UNHANDLED ERROR RATE",
@@ -349,50 +623,50 @@ def build_adaptive_slides(
         {
             "slide_number": 3,
             "badge": "BATTLE-TESTED PATTERN",
-            "title": "The Solution: Decoupled Event Streams",
-            "subtitle": "Replacing synchronous lock contention with partitioned queue buffers and read replicas.",
+            "title": f"The Solution: {profile['solution_title']}",
+            "subtitle": profile['solution_sub'],
             "stage_html": f"""
-            {render_full_width_topology(width=880, height=220, ingress_label="Edge Gateway", ingress_metric="50k rps", worker_label="Stateless Workers", worker_metric="Autoscaling", queue_label="Kafka Partitions", queue_metric="16 Partitions", store_label="Read Replicas", store_metric="p99 4.2ms", accent=accent)}
+            {render_full_width_topology(width=880, height=220, ingress_label=topo['ingress_label'], ingress_metric=topo.get('ingress_metric'), worker_label=topo['worker_label'], worker_metric=topo.get('worker_metric'), queue_label=topo['queue_label'], queue_metric=topo.get('queue_metric'), store_label=topo['store_label'], store_metric=topo.get('store_metric'), accent=accent)}
             <div class="narrative-block highlight">
               <span class="block-tag">Architectural Invariant</span>
-              <p class="block-text">Writes buffer safely into partitions; read replicas serve p99 queries in under 5ms without table locking.</p>
+              <p class="block-text">{profile['invariant']}</p>
             </div>
             """,
-            "metric_1_label": "RESTORED p99 LATENCY",
-            "metric_1_val": "4.2ms (STABLE)",
-            "metric_2_label": "CONSUMER BUFFER LAG",
-            "metric_2_val": "0 messages",
+            "metric_1_label": profile['metric_1'][0],
+            "metric_1_val": profile['metric_1'][1],
+            "metric_2_label": profile['metric_2'][0],
+            "metric_2_val": profile['metric_2'][1],
             "swipe_hint": "Swipe for Staff Checklist →",
         },
         {
             "slide_number": 4,
             "badge": "PRODUCTION PLAYBOOK",
             "title": "Staff Engineer Checklist",
-            "subtitle": "Four rules to audit your distributed architecture before hitting production.",
+            "subtitle": "Guiding rules to audit your distributed architecture before hitting production.",
             "stage_html": f"""
             <div class="playbook-card">
               <span class="playbook-num">RULE 1</span>
-              <div class="playbook-content"><span class="playbook-title">Enforce Timeout Budgets</span><span class="playbook-sub">Apply jittered exponential backoffs on all downstream RPC calls.</span></div>
+              <div class="playbook-content"><span class="playbook-title">{profile['rule_1'][0]}</span><span class="playbook-sub">{profile['rule_1'][1]}</span></div>
             </div>
             <div class="playbook-card">
               <span class="playbook-num">RULE 2</span>
-              <div class="playbook-content"><span class="playbook-title">Partition by High-Cardinality Keys</span><span class="playbook-sub">Prevent hot partitions and rebalance overhead under sudden traffic surges.</span></div>
+              <div class="playbook-content"><span class="playbook-title">{profile['rule_2'][0]}</span><span class="playbook-sub">{profile['rule_2'][1]}</span></div>
             </div>
             <div class="tradeoff-grid">
               <div class="tradeoff-card gain">
                 <span class="tradeoff-tag" style="color: #10b981;">ARCHITECTURAL GAIN</span>
-                <span class="tradeoff-text">Decoupled throughput; failure isolation across all downstream services.</span>
+                <span class="tradeoff-text">{profile['gain']}</span>
               </div>
               <div class="tradeoff-card cost">
                 <span class="tradeoff-tag" style="color: #f59e0b;">KNOWN CEILING</span>
-                <span class="tradeoff-text">Requires handling eventual consistency and asynchronous out-of-order retries.</span>
+                <span class="tradeoff-text">{profile['cost']}</span>
               </div>
             </div>
             """,
-            "metric_1_label": "REDUNDANCY MODEL",
-            "metric_1_val": "Multi-Region Active",
-            "metric_2_label": "DEPLOYMENT SAFETY",
-            "metric_2_val": "Zero-Downtime Blue/Green",
+            "metric_1_label": profile['metric_1'][0],
+            "metric_1_val": profile['metric_1'][1],
+            "metric_2_label": profile['metric_2'][0],
+            "metric_2_val": profile['metric_2'][1],
             "swipe_hint": "Save & Share for Reference",
         },
     ]
@@ -450,6 +724,10 @@ async def generate_carousel_async(
     theme: str = "cyan",
     overwrite: bool = False,
     slide_count: Optional[int] = None,
+    angle_content: Optional[str] = None,
+    senior_question: Optional[str] = None,
+    feedback: Optional[str] = None,
+    custom_instructions: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Asynchronously generates an adaptive 3-to-5 slide carousel:
@@ -459,7 +737,17 @@ async def generate_carousel_async(
     target_dir = output_dir or THUMBNAILS_DIR
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    slides = slides_data or build_adaptive_slides(topic_id, title, slide_count=slide_count)
+    theme_cfg = CAROUSEL_THEMES.get(theme, CAROUSEL_THEMES["cyan"])
+    slides = slides_data or build_adaptive_slides(
+        topic_id,
+        title,
+        slide_count=slide_count,
+        accent=theme_cfg["accent"],
+        angle_content=angle_content,
+        senior_question=senior_question,
+        feedback=feedback,
+        custom_instructions=custom_instructions,
+    )
     canvas_spec = CANVAS_ASPECT_RATIOS["portrait"]
     width = canvas_spec["width"]
     height = canvas_spec["height"]
@@ -527,6 +815,10 @@ def generate_carousel(
     theme: str = "cyan",
     overwrite: bool = False,
     slide_count: Optional[int] = None,
+    angle_content: Optional[str] = None,
+    senior_question: Optional[str] = None,
+    feedback: Optional[str] = None,
+    custom_instructions: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Synchronous entrypoint for carousel generation."""
     try:
@@ -547,6 +839,10 @@ def generate_carousel(
                     theme=theme,
                     overwrite=overwrite,
                     slide_count=slide_count,
+                    angle_content=angle_content,
+                    senior_question=senior_question,
+                    feedback=feedback,
+                    custom_instructions=custom_instructions,
                 )
             )
             return future.result()
@@ -560,5 +856,9 @@ def generate_carousel(
                 theme=theme,
                 overwrite=overwrite,
                 slide_count=slide_count,
+                angle_content=angle_content,
+                senior_question=senior_question,
+                feedback=feedback,
+                custom_instructions=custom_instructions,
             )
         )
