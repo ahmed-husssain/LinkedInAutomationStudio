@@ -1025,39 +1025,56 @@ class TrendingTopicsActionView(View):
             title = topic_data.get("title", "Distributed Architecture")
             status_msg = await interaction.channel.send(
                 f"🚀 **Building High-Retention PDF Carousel for: {title}...**\n"
-                f"• Brainstorming 6 visual slides with Content Strategist...\n"
-                f"• Compiling 1080x1350 dark-mode document with Carousel Architect..."
+                f"• Compiling specular 4-slide dark-mode document with Carousel Engine..."
             )
             import re
-            from src.agents.strategist import ContentStrategistAgent
-            from src.agents.carousel_builder import build_pdf_carousel
             from src.engines.copy_engine import format_linkedin_post
-            strategist = ContentStrategistAgent()
-            draft = strategist.brainstorm_topic(title)
             slug = re.sub(r"[^a-zA-Z0-9_]", "_", title.lower())
-            pdf_path = build_pdf_carousel(
-                topic_id=slug,
-                topic_title=draft.get("topic_title", title),
-                slides_data=draft.get("slides", []),
-                senior_question=draft.get("senior_question", "")
-            )
+
+            cover_path = None
+            try:
+                from src.engines.carousel_engine import generate_carousel_async
+                res = await generate_carousel_async(
+                    topic_id=slug,
+                    title=title,
+                    overwrite=True
+                )
+                pdf_path = res["pdf"]
+                cover_path = res.get("cover")
+            except Exception as exc:
+                from src.agents.strategist import ContentStrategistAgent
+                from src.agents.carousel_builder import build_pdf_carousel
+                strategist = ContentStrategistAgent()
+                draft = strategist.brainstorm_topic(title)
+                pdf_path = build_pdf_carousel(
+                    topic_id=slug,
+                    topic_title=draft.get("topic_title", title),
+                    slides_data=draft.get("slides", []),
+                    senior_question=draft.get("senior_question", "")
+                )
+
             post_copy = format_linkedin_post(
-                topic_title=draft.get("topic_title", title),
-                subject=draft.get("subject", title),
-                angle_content=draft.get("body", ""),
-                senior_question=draft.get("senior_question", "")
+                topic_title=title,
+                subject=title,
+                angle_content=topic_data.get("hook", ""),
+                senior_question="How does your engineering team handle this in production?"
             )
-            pdf_file = discord.File(str(pdf_path), filename=f"{slug}_Carousel.pdf")
+            attached_files = [discord.File(str(pdf_path), filename=f"{slug}_Carousel.pdf")]
+            if cover_path and Path(cover_path).exists():
+                attached_files.append(
+                    discord.File(str(cover_path), filename=f"{slug}_Cover.png")
+                )
+
             await status_msg.edit(
                 content=(
-                    f"✅ **YOUR 6-SLIDE PDF CAROUSEL IS READY!**\n"
+                    f"✅ **YOUR SCENIC PDF CAROUSEL IS READY!**\n"
                     f"────────────────────────────────────────\n"
                     f"{post_copy}\n"
                     f"────────────────────────────────────────\n"
-                    f"📑 **Interactive PDF Document attached below:**"
+                    f"📑 **Interactive PDF Document & Cover Preview attached below:**"
                 )
             )
-            await interaction.channel.send(file=pdf_file)
+            await interaction.channel.send(files=attached_files)
         return callback
 
     def make_video_callback(self, topic_data: dict):
