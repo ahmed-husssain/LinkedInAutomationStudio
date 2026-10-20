@@ -59,6 +59,8 @@ venv.bak/
 # =====================================================================
 media/
 assets/carousels/
+assets/drafts/
+assets/published/
 data/*.json
 !data/.gitkeep
 *.log
