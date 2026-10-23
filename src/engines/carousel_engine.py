@@ -326,11 +326,43 @@ def resolve_topic_profile(
             "metric_2": ("MEMORY PER SOCKET", "2.4 KB (-99.8%)"),
         })
 
-    # Apply user feedback customization if provided
-    if feedback:
-        fb_clean = feedback.strip()
-        profile["rule_1"] = (f"Refined Constraint: {fb_clean[:32]}", f"Addressed user architectural feedback: {fb_clean}")
-        profile["feedback_note"] = fb_clean
+    # 6. LinkedIn Automation Studio / Autonomous Content Engine
+    elif any(k in lookup for k in ["linkedin_studio", "autonomous_studio", "studio", "how_i_built", "automation_studio"]):
+        profile.update({
+            "title": "Automating 60fps Content in Python",
+            "subtitle": "Replacing manual Canva & Figma drag-and-drop toil with deterministic code.",
+            "kpi_1": ("BUILD TIME", "15s / Deck"),
+            "kpi_2": ("CLOUD COST", "$0 / Zero SaaS"),
+            "kpi_3": ("ACCURACY", "100% Code-Driven"),
+            "bottleneck_title": "The Manual Content Toil",
+            "bottleneck_sub": "Why manual carousel editing in Figma/Canva wastes 45 minutes per post.",
+            "fail_pattern": "Engineers spend 45 minutes manually aligning text boxes, kerning fonts, and adjusting layout drift across multiple slides.",
+            "specimen_file": "studio_pipeline.py",
+            "specimen_body": "# Deterministic Autonomous Studio Pipeline<br>pdf = await render_carousel(topic, slides=3, crf=18)<br>video = await render_manim(topic, fps=60, pts=1.4)<br>await approval_gate.stage(pdf, video)",
+            "fail_timeline": "Manual post creation causes creator burnout. Inconsistency across slides leads to broken visual hierarchy.",
+            "solution_title": "Headless Studio Architecture",
+            "solution_sub": "Discord mobile bot triggering Playwright HTML rendering and Manim CE compilation.",
+            "topology": {
+                "ingress_label": "Discord Bot",
+                "ingress_metric": "1-Tap Trigger",
+                "worker_label": "Topic Engine",
+                "worker_metric": "Adaptive Depth",
+                "queue_label": "Playwright / Manim",
+                "queue_metric": "60fps & PDF",
+                "store_label": "Approval Gate",
+                "store_metric": "Mobile 1-Tap",
+            },
+            "invariant": "Every technical post, multi-page PDF carousel, and 60fps animation compiles in under 15 seconds with zero SaaS fees.",
+            "rule_1": ("Never Hand-Draw Architecture", "Code SVGs and Manim scenes deterministically to eliminate layout drift."),
+            "rule_2": ("Enforce Mobile Approval Gates", "Never auto-publish without a private Discord staging channel and 1-tap approve/reject gates."),
+            "gain": "Turns 45 minutes of manual Canva tweaking into 15 seconds from your phone.",
+            "cost": "Requires local Playwright, Manim, and FFmpeg toolchains rather than simple cloud wrappers.",
+            "seq_steps": ["Discord Topic Trigger", "Adaptive Layout Synthesis", "Playwright PDF Render", "FFmpeg Pacing Adjust", "Mobile Approval Delivery"],
+            "sysctl_file": "studio_manifest.yaml",
+            "sysctl_body": "studio:<br>  viewport: { width: 1080, height: 1350 }<br>  video: { fps: 60, codec: libx264, crf: 18 }<br>  approval_timeout: 86400s",
+            "metric_1": ("PIPELINE SPEED", "14.2s End-to-End"),
+            "metric_2": ("OUTPUT STANDARD", "1080p 60fps Crisp"),
+        })
 
     return profile
 
@@ -360,15 +392,6 @@ def build_adaptive_slides(
 
     topo = profile["topology"]
 
-    feedback_html = ""
-    if profile.get("feedback_note"):
-        feedback_html = f"""
-        <div class="narrative-block highlight" style="border-color: #10b981; background: rgba(16, 185, 129, 0.08);">
-          <span class="block-tag" style="color: #10b981;">User Feedback Adjustment</span>
-          <p class="block-text">{profile['feedback_note']}</p>
-        </div>
-        """
-
     if count == 3:
         return [
             {
@@ -382,7 +405,6 @@ def build_adaptive_slides(
                   <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_2'][0]}</span><span class="scale-kpi-val">{profile['kpi_2'][1]}</span></div>
                   <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_3'][0]}</span><span class="scale-kpi-val">{profile['kpi_3'][1]}</span></div>
                 </div>
-                {feedback_html}
                 <div class="narrative-block highlight">
                   <span class="block-tag">Core Principle</span>
                   <p class="block-text">{profile['invariant']}</p>
@@ -392,10 +414,10 @@ def build_adaptive_slides(
                   <div class="specimen-body">{profile['specimen_body']}</div>
                 </div>
                 """,
-                "metric_1_label": profile['kpi_1'][0],
-                "metric_1_val": profile['kpi_1'][1],
-                "metric_2_label": profile['kpi_2'][0],
-                "metric_2_val": profile['kpi_2'][1],
+                "metric_1_label": profile['metric_1'][0],
+                "metric_1_val": profile['metric_1'][1],
+                "metric_2_label": profile['metric_2'][0],
+                "metric_2_val": profile['metric_2'][1],
                 "swipe_hint": "Swipe for Mechanism →",
             },
             {
@@ -405,6 +427,16 @@ def build_adaptive_slides(
                 "subtitle": profile['solution_sub'],
                 "stage_html": f"""
                 {render_full_width_topology(width=880, height=220, ingress_label=topo['ingress_label'], ingress_metric=topo.get('ingress_metric'), worker_label=topo['worker_label'], worker_metric=topo.get('worker_metric'), queue_label=topo['queue_label'], queue_metric=topo.get('queue_metric'), store_label=topo['store_label'], store_metric=topo.get('store_metric'), accent=accent)}
+                <div class="tradeoff-grid" style="margin: 4px 0;">
+                  <div class="tradeoff-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+                    <span class="tradeoff-tag" style="color: var(--accent);">INGRESS PIPELINE</span>
+                    <span class="tradeoff-text" style="color: #f1f5f9; font-weight: 600;">{topo['ingress_label']} ({topo.get('ingress_metric', 'Active')})</span>
+                  </div>
+                  <div class="tradeoff-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+                    <span class="tradeoff-tag" style="color: #10b981;">CORE INVARIANT</span>
+                    <span class="tradeoff-text" style="color: #f1f5f9; font-weight: 600;">{topo['store_label']} ({topo.get('store_metric', 'Deterministic')})</span>
+                  </div>
+                </div>
                 <div class="narrative-block highlight">
                   <span class="block-tag">Architectural Invariant</span>
                   <p class="block-text">{profile['invariant']}</p>
@@ -429,6 +461,10 @@ def build_adaptive_slides(
                 <div class="playbook-card">
                   <span class="playbook-num">RULE 2</span>
                   <div class="playbook-content"><span class="playbook-title">{profile['rule_2'][0]}</span><span class="playbook-sub">{profile['rule_2'][1]}</span></div>
+                </div>
+                <div class="config-specimen" style="margin: 4px 0;">
+                  <div class="specimen-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="specimen-title">{profile.get('sysctl_file', 'production_rules.env')}</span></div>
+                  <div class="specimen-body">{profile.get('sysctl_body', 'VERIFY_FAILOVER=true<br>CIRCUIT_BREAKER_MAX_RETRIES=3<br>TIMEOUT_MS=250')}</div>
                 </div>
                 <div class="tradeoff-grid">
                   <div class="tradeoff-card gain"><span class="tradeoff-tag" style="color: #10b981;">ARCHITECTURAL GAIN</span><span class="tradeoff-text">{profile['gain']}</span></div>
