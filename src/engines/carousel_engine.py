@@ -492,7 +492,6 @@ def build_adaptive_slides(
                   <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_2'][0]}</span><span class="scale-kpi-val">{profile['kpi_2'][1]}</span></div>
                   <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_3'][0]}</span><span class="scale-kpi-val">{profile['kpi_3'][1]}</span></div>
                 </div>
-                {feedback_html}
                 <div class="narrative-block highlight">
                   <span class="block-tag">The Core Challenge</span>
                   <p class="block-text">{profile['fail_pattern']}</p>
@@ -502,10 +501,10 @@ def build_adaptive_slides(
                   <p class="block-text">Swipe left to inspect the failure bottleneck, decoupled topology, protocol flow, and production runbook.</p>
                 </div>
                 """,
-                "metric_1_label": profile['kpi_1'][0],
-                "metric_1_val": profile['kpi_1'][1],
-                "metric_2_label": profile['kpi_2'][0],
-                "metric_2_val": profile['kpi_2'][1],
+                "metric_1_label": profile['metric_1'][0],
+                "metric_1_val": profile['metric_1'][1],
+                "metric_2_label": profile['metric_2'][0],
+                "metric_2_val": profile['metric_2'][1],
                 "swipe_hint": "Swipe for Naive Bottleneck →",
             },
             {
@@ -615,7 +614,6 @@ def build_adaptive_slides(
               <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_2'][0]}</span><span class="scale-kpi-val">{profile['kpi_2'][1]}</span></div>
               <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_3'][0]}</span><span class="scale-kpi-val">{profile['kpi_3'][1]}</span></div>
             </div>
-            {feedback_html}
             <div class="narrative-block highlight">
               <span class="block-tag">The Core Challenge</span>
               <p class="block-text">{profile['fail_pattern']}</p>
@@ -625,10 +623,10 @@ def build_adaptive_slides(
               <p class="block-text">Swipe left to dissect the failure mode, the decoupled topology, and the staff checklist.</p>
             </div>
             """,
-            "metric_1_label": profile['kpi_1'][0],
-            "metric_1_val": profile['kpi_1'][1],
-            "metric_2_label": profile['kpi_2'][0],
-            "metric_2_val": profile['kpi_2'][1],
+            "metric_1_label": profile['metric_1'][0],
+            "metric_1_val": profile['metric_1'][1],
+            "metric_2_label": profile['metric_2'][0],
+            "metric_2_val": profile['metric_2'][1],
             "swipe_hint": "Swipe for Failure Mode →",
         },
         {
