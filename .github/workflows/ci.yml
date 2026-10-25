@@ -41,8 +41,8 @@ jobs:
 
       - name: Static Security Scan (Bandit)
         run: |
-          # Generate Bandit JSON report
-          bandit -r src/ -f json -o bandit-report.json || true
+          # Generate Bandit JSON report across source code and web application
+          bandit -r src/ app.py -f json -o bandit-report.json || true
           # Parse and fail if any HIGH severity security issues exist
           python - <<'PY'
           import json, sys
@@ -67,9 +67,9 @@ jobs:
       - name: Code Quality & Syntax Verification (Flake8)
         run: |
           # Stop build if there are Python syntax errors or undefined names
-          flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Exit-zero treat all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 src/ tests/ --count --exit-zero --max-complexity=15 --max-line-length=135 --statistics
+          flake8 src/ tests/ app.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Enforce complexity and max line length across python modules
+          flake8 src/ tests/ app.py --count --exit-zero --max-complexity=15 --max-line-length=135 --statistics
 
   test-suite:
     name: Automated Adversarial Test Suite
@@ -109,3 +109,15 @@ jobs:
           DISCORD_BOT_TOKEN: "dummy_bot_token_for_ci"
         run: |
           python -m pytest -v --timeout=25 --durations=10
+
+      - name: Compile PR Visual Verification Sample (1080x1350 PDF & PNGs)
+        run: |
+          python -c "import asyncio, pathlib; from src.engines.carousel_engine import generate_carousel_async; asyncio.run(generate_carousel_async('ci_pr_sample', 'Continuous Integration Verification', slide_count=3, overwrite=True, output_dir=pathlib.Path('ci_visual_artifacts')))"
+
+      - name: Upload PR Visual Artifacts for Maintainer Review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-visual-verification-sample
+          path: ci_visual_artifacts/
+          retention-days: 7
