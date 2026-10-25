@@ -364,6 +364,12 @@ def resolve_topic_profile(
             "metric_2": ("OUTPUT STANDARD", "1080p 60fps Crisp"),
         })
 
+    # Apply user feedback customization if provided
+    if feedback:
+        fb_clean = feedback.strip()
+        profile["rule_1"] = (f"Refined Constraint: {fb_clean[:32]}", f"Addressed user architectural feedback: {fb_clean}")
+        profile["feedback_note"] = fb_clean
+
     return profile
 
 
@@ -392,6 +398,15 @@ def build_adaptive_slides(
 
     topo = profile["topology"]
 
+    feedback_html = ""
+    if profile.get("feedback_note"):
+        feedback_html = f"""
+        <div class="narrative-block highlight" style="border-color: #10b981; background: rgba(16, 185, 129, 0.08);">
+          <span class="block-tag" style="color: #10b981;">User Feedback Adjustment</span>
+          <p class="block-text">{profile['feedback_note']}</p>
+        </div>
+        """
+
     if count == 3:
         return [
             {
@@ -405,6 +420,7 @@ def build_adaptive_slides(
                   <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_2'][0]}</span><span class="scale-kpi-val">{profile['kpi_2'][1]}</span></div>
                   <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_3'][0]}</span><span class="scale-kpi-val">{profile['kpi_3'][1]}</span></div>
                 </div>
+                {feedback_html}
                 <div class="narrative-block highlight">
                   <span class="block-tag">Core Principle</span>
                   <p class="block-text">{profile['invariant']}</p>
@@ -492,6 +508,7 @@ def build_adaptive_slides(
                   <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_2'][0]}</span><span class="scale-kpi-val">{profile['kpi_2'][1]}</span></div>
                   <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_3'][0]}</span><span class="scale-kpi-val">{profile['kpi_3'][1]}</span></div>
                 </div>
+                {feedback_html}
                 <div class="narrative-block highlight">
                   <span class="block-tag">The Core Challenge</span>
                   <p class="block-text">{profile['fail_pattern']}</p>
@@ -614,6 +631,7 @@ def build_adaptive_slides(
               <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_2'][0]}</span><span class="scale-kpi-val">{profile['kpi_2'][1]}</span></div>
               <div class="scale-kpi"><span class="scale-kpi-label">{profile['kpi_3'][0]}</span><span class="scale-kpi-val">{profile['kpi_3'][1]}</span></div>
             </div>
+            {feedback_html}
             <div class="narrative-block highlight">
               <span class="block-tag">The Core Challenge</span>
               <p class="block-text">{profile['fail_pattern']}</p>

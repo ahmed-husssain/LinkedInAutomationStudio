@@ -1,9 +1,9 @@
 # 🚀 LinkedIn Automation Studio
 
-An autonomous, multi-agent content generation and publishing studio engineered to create viral, top 1% system architecture and backend engineering content for LinkedIn. Delivers ready-to-publish packages directly to Discord:
-1. **Interactive 6-Slide PDF Carousels** (1080x1350 vertical document decks for 3x reach).
-2. **2D Animated Motion Graphics** (1080x1080 square 60fps Manim CE videos).
-3. **High-Contrast Architecture Diagrams** (1080x1080 Pillow technical covers).
+An autonomous, multi-agent content generation and publishing studio engineered to create viral, top 1% system architecture and backend engineering content for LinkedIn. Delivers ready-to-publish packages via a **Zero-Setup Web Studio (Streamlit / Hugging Face Spaces)** and Discord:
+1. **Interactive 1080x1350 PDF Carousels** (Vertical document decks with zero dead space and real architecture specimens).
+2. **2D Animated Motion Graphics** (1080p 60fps Manim CE videos with human-calibrated pacing).
+3. **High-Contrast Architecture Diagrams** (1080x1080 multi-theme vector technical covers).
 4. **Authentic Developer Post Copy** (Crafted with hook, mental model, and senior discussion prompts).
 
 ---
@@ -14,7 +14,8 @@ This repository features a comprehensive **Agent Context Harness** and documenta
 
 | Document | Purpose & Scope |
 | :--- | :--- |
-| **[📘 Complete Setup Guide](docs/setup_guide.md)** | **Start here!** Step-by-step beginner guide for Discord Bot, Gemini API, FFmpeg, and running the studio. |
+| **[📋 Master Specification (SPEC.md)](SPEC.md)** | **Core Contract!** Non-technical zero-cost web pivot, daily & weekly targets, tech stack evaluation, and quality gates. |
+| **[📘 Complete Setup Guide](docs/setup_guide.md)** | Step-by-step guide for local development, Discord Bot, Gemini API, and FFmpeg. |
 | **[🏛️ Technical Architecture](docs/architecture.md)** | End-to-end system topology, bounded LRU poller, rendering engines, and data flow. |
 | **[📋 Product Requirements (PRD)](docs/prd.md)** | Feature requirements, user personas, acceptance criteria, and anti-goals. |
 | **[🗺️ Strategic Roadmap](docs/roadmap.md)** | 4-Phase evolution from MVP to autonomous self-healing media factory. |

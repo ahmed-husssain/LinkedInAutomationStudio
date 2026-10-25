@@ -62,6 +62,7 @@ assets/carousels/
 assets/drafts/
 assets/published/
 data/*.json
+data/published/
 !data/.gitkeep
 *.log
 logs/

@@ -52,22 +52,25 @@ Phase 4: Multi-Platform Syndication & Closed-Loop Analytics (FUTURE)
 * [x] **Interactive Discord UI:** Dropdown selectors, 1-tap generation buttons, dynamic topic rerolling, and bounded LRU message cache.
 * [x] **Production CI/CD:** GitHub Actions workflow with zero-leak secret guard, Bandit AST security scan, Flake8 syntax checks, and 39/39 passing tests.
 
-### 🔄 Phase 2: Visual Excellence & Rich Diagrams *(In Progress)*
+### 🔄 Phase 2: Visual Excellence & Zero-Friction Web Studio *(In Progress)*
+* [x] **Master Specification Contract:** Detailed targets and quality gates defined in [`SPEC.md`](../SPEC.md).
+* [ ] **Streamlit Zero-Setup Web Studio:** 1-screen responsive web dashboard (`app.py`) for non-technical users.
+* [ ] **Hugging Face Spaces Cloud Deployment:** $0 container hosting with zero credit card required.
 * [ ] **Eliminate All Font Tofu (`[]`):** Replace unrenderable emoji characters with programmatically drawn vector shapes (crisp arrows, checkmarks, status pills).
 * [ ] **Visual Before/After Architecture Cards:** Introduce side-by-side comparative diagrams into the PDF carousel generator (e.g., comparing UUIDv4 vs UUIDv7 disk storage layouts).
-* [ ] **Smart Typography Wrap:** Replace raw slice cutoffs (`[:32]`, `[:50]`) with font-aware bounding-box line wrapping to eliminate mid-word truncations.
+* [ ] **Smart Typography Wrap:** Replace raw slice cutoffs with font-aware bounding-box line wrapping to eliminate mid-word truncations.
 * [ ] **Adaptive Vertical Balancing:** Dynamically expand card heights, font sizes, and spacing when a slide has fewer bullet points to eliminate barren dead space.
 * [ ] **Context-Aware Takeaways:** Replace generic boilerplate with topic-accurate operational rules.
 
 ### 🚀 Phase 3: Autonomous Incident Watchdog *(Upcoming)*
 * [ ] **Automated Tech Radar:** RSS ingest for Netflix TechBlog, Cloudflare Blog, Discord Engineering, and AWS Status dashboard.
-* [ ] **Breaking Incident Auto-Drafts:** When a major service outage occurs, automatically draft a post-mortem breakdown and notify Discord.
+* [ ] **Breaking Incident Auto-Drafts:** When a major service outage occurs, automatically draft a post-mortem breakdown.
 * [ ] **Architecture Schematic Generator:** Programmatic generation of sequence diagrams and failure flowcharts directly in Pillow/SVG.
 
 ### 🌐 Phase 4: Multi-Platform Syndication & Feedback Loop *(Long-Term)*
 * [ ] **Direct LinkedIn API Scheduled Publishing:** Scheduled morning release with automated first-comment resource links.
 * [ ] **Twitter/X Thread Formatter:** Auto-generating 280-character thread progressions from carousel slides.
-* [ ] **Closed-Loop Feedback:** Scraping LinkedIn post impression and engagement metrics to auto-tune the Content Strategist's future topic weights.
+* [ ] **Closed-Loop Feedback:** Scraping LinkedIn post impression and engagement metrics to auto-tune future topic weights.
 
 ---
 
@@ -75,9 +78,13 @@ Phase 4: Multi-Platform Syndication & Closed-Loop Analytics (FUTURE)
 
 | Feature | Status | Justification |
 | :--- | :--- | :--- |
+| **Zero-Install Web Studio (Streamlit / HF Spaces)** | **IN SCOPE (PRIMARY)** | Essential for non-technical users; $0 cloud cost, zero card required, 100% friction-free. |
 | **High-stakes distributed systems content** | **IN SCOPE** | Core value proposition; captures senior engineering attention. |
 | **PDF Carousels & Manim 2D Animations** | **IN SCOPE** | Highest-reach formats on modern technical LinkedIn. |
-| **Discord Mobile Studio** | **IN SCOPE** | Lowest friction for creator review and on-the-go publishing. |
+| **Discord Bot Gateway** | **IN SCOPE (SECONDARY)** | Retained as secondary power-user interface for mobile notifications. |
+| **Heavy Desktop Executables (.exe) / Virus Scares** | **OUT OF SCOPE** | Security warnings, trust barriers, and OS bundling fragility. |
+| **Chrome Extension (Manifest V3)** | **OUT OF SCOPE** | Cannot run Manim or Playwright client-side without costly external backend servers. |
 | **Heavyweight Agent Frameworks (CrewAI, LangChain)** | **OUT OF SCOPE** | Adds 80+ redundant dependencies, breaks maintainability, violates Ponytail minimalism. |
 | **Generic Motivational / Non-Tech Content** | **OUT OF SCOPE** | Dilutes brand authority and repels senior engineers. |
 | **Aggressive Feed Scraping / Auto-DMs** | **OUT OF SCOPE** | Violates LinkedIn terms of service and risks account restriction. |
+
