@@ -115,10 +115,16 @@ st.markdown(
         font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
     }
 
-    /* Container Constrained Width for Calm Focus */
+    /* Prevent Streamlit floating header from covering top content */
+    header[data-testid="stHeader"] {
+        background: rgba(0, 0, 0, 0.7) !important;
+        backdrop-filter: blur(12px) !important;
+    }
+
+    /* Container Constrained Width for Calm Focus with generous top clearance */
     .block-container {
         max-width: 900px !important;
-        padding-top: 2rem !important;
+        padding-top: 5rem !important;
         padding-bottom: 4rem !important;
     }
 
