@@ -41,10 +41,38 @@ async def get_browser() -> Browser:
         _running_loop = loop
 
         _playwright_instance = await async_playwright().start()
-        _browser_instance = await _playwright_instance.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
-        )
+        launch_args = [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--disable-background-networking",
+            "--disable-default-apps",
+            "--disable-extensions",
+            "--disable-sync",
+            "--disable-translate",
+            "--hide-scrollbars",
+            "--metrics-recording-only",
+            "--mute-audio",
+            "--no-first-run",
+            "--safebrowsing-disable-auto-update",
+        ]
+        try:
+            _browser_instance = await _playwright_instance.chromium.launch(
+                headless=True,
+                args=launch_args,
+            )
+        except Exception as exc:
+            if "executable doesn't exist" in str(exc).lower() or "playwright install" in str(exc).lower():
+                import sys
+                import subprocess
+                subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+                _browser_instance = await _playwright_instance.chromium.launch(
+                    headless=True,
+                    args=launch_args,
+                )
+            else:
+                raise
         return _browser_instance
 
 
@@ -98,22 +126,38 @@ async def render_html_to_image(
 async def close_browser() -> None:
     """Cleanly shuts down the shared browser instance and Playwright runtime."""
     global _playwright_instance, _browser_instance, _running_loop
+    try:
+        current_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        current_loop = None
+
+    # If the browser was bound to an older event loop that has closed,
+    # attempting to await its close methods on a new loop hangs forever in Playwright.
+    if _running_loop is not None and current_loop is not None and _running_loop is not current_loop:
+        _browser_instance = None
+        _playwright_instance = None
+        _running_loop = None
+        return
+
     lock = _get_lock()
     async with lock:
         if _browser_instance is not None:
             try:
-                await _browser_instance.close()
+                await asyncio.wait_for(_browser_instance.close(), timeout=3.0)
             except Exception:
                 pass
             _browser_instance = None
 
         if _playwright_instance is not None:
             try:
-                await _playwright_instance.stop()
+                await asyncio.wait_for(_playwright_instance.stop(), timeout=3.0)
             except Exception:
                 pass
             _playwright_instance = None
 
-        # Allow Windows proactor pipe transports to cleanly flush
-        await asyncio.sleep(0.05)
+        # Allow proactor/epoll pipe transports to cleanly flush
+        try:
+            await asyncio.sleep(0.05)
+        except Exception:
+            pass
         _running_loop = None

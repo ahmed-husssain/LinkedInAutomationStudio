@@ -17,7 +17,7 @@ from src.engines.html_renderer import (
 def cleanup_browser():
     yield
     try:
-        asyncio.run(close_browser())
+        asyncio.run(asyncio.wait_for(close_browser(), timeout=3.0))
     except Exception:
         pass
 

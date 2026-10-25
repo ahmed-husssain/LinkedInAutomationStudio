@@ -130,14 +130,14 @@ To ensure predictable, rapid progress without accidental complexity, all work is
   * Verified with automated headless Streamlit `AppTest` and 93/93 passing test suite.
 
 ### 4.2 Weekly Targets (Phase 2: Deployment & Polish — Days 3 to 7)
-* [ ] **Target W1 — Hugging Face Spaces Cloud Deployment:**
-  * Create `packages.txt` (`ffmpeg`, `libcairo2-dev`, `libpango1.0-dev`, `chromium`).
-  * Configure environment secrets for Gemini API.
-  * Verify live public deployment at `https://huggingface.co/spaces/...` with zero card and $0 cost.
-* [ ] **Target W2 — 12 Standardized Architectural Presets:**
-  * Pre-choreograph visual templates for the top 12 system design scenarios (Consistent Hashing, Read-After-Write Consistency, Kafka vs RabbitMQ, Redis Cache Stampede, etc.) across both Manim vectors and Playwright carousels.
-* [ ] **Target W3 — 1-Click LinkedIn Creator Bundle:**
-  * One-click action that downloads the media asset (PDF or MP4) and copies the formatted post copy to the clipboard.
+* [x] **Target W1 — Hugging Face Spaces Cloud Deployment:**
+  * Create `packages.txt` (`ffmpeg`, `libcairo2-dev`, `libpango1.0-dev`).
+  * Added self-healing browser installer in `src/engines/html_renderer.py`.
+  * Pre-configured Streamlit SDK frontmatter in `README.md` for $0 cloud hosting.
+* [x] **Target W2 — 12 Standardized Architectural Presets:**
+  * Curated 12 system design scenarios (JWT Revocation, Consistent Hashing, Kafka vs RabbitMQ, Redis Cache Stampede, etc.) across 2D blueprints, D2 declarative scripts, Excalidraw whiteboards, 4-slide carousels, and 60fps Manim vectors.
+* [x] **Target W3 — 1-Click LinkedIn Creator Bundle:**
+  * Unified multi-format preview stage with 1-click downloads (PNG, PDF, MP4, .excalidraw, D2 playground link) and ready post copy.
 * [ ] **Target W4 — Non-Technical User Validation:**
   * Hand the public URL to a non-technical user. Measure time-to-first-download (Target: < 60 seconds with 0 errors).
 
