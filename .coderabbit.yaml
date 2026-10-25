@@ -1,9 +1,10 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 # =====================================================================
 # CodeRabbit AI Code Review Configuration
 # https://docs.coderabbit.ai/
 # =====================================================================
 
-version: "2"
+version: 2
 language: "en-US"
 
 early_access: false
