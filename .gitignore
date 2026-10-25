@@ -61,6 +61,7 @@ media/
 assets/carousels/
 assets/drafts/
 assets/published/
+assets/thumbnails/
 data/*.json
 data/published/
 !data/.gitkeep

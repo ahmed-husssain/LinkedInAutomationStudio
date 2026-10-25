@@ -155,6 +155,10 @@ async def render_parameterized_animation(
     return target_path
 
 
+# Alias for asynchronous naming convention consistency
+render_parameterized_animation_async = render_parameterized_animation
+
+
 async def get_video_duration_async(video_path: Path) -> float:
     """Returns video duration in seconds via ffprobe."""
     if not video_path.exists():
