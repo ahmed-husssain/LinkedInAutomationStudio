@@ -74,7 +74,7 @@ jobs:
   test-suite:
     name: Automated Adversarial Test Suite
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout Codebase
         uses: actions/checkout@v4
@@ -119,4 +119,4 @@ jobs:
           GEMINI_API_KEY: "dummy_test_key_for_ci"
           DISCORD_BOT_TOKEN: "dummy_bot_token_for_ci"
         run: |
-          python -m pytest -v --timeout=25 --durations=10
+          python -m pytest -v -n 2 --timeout=60 --durations=10

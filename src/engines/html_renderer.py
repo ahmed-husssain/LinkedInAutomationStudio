@@ -41,7 +41,22 @@ async def get_browser() -> Browser:
         _running_loop = loop
 
         _playwright_instance = await async_playwright().start()
-        launch_args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+        launch_args = [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--disable-background-networking",
+            "--disable-default-apps",
+            "--disable-extensions",
+            "--disable-sync",
+            "--disable-translate",
+            "--hide-scrollbars",
+            "--metrics-recording-only",
+            "--mute-audio",
+            "--no-first-run",
+            "--safebrowsing-disable-auto-update",
+        ]
         try:
             _browser_instance = await _playwright_instance.chromium.launch(
                 headless=True,
