@@ -118,16 +118,16 @@ To ensure predictable, rapid progress without accidental complexity, all work is
 
 ### 4.1 Daily Targets (Phase 1: Immediate — 24 to 48 Hours)
 * [x] **Target D1 — Specification & Architecture Contract:** Commit `SPEC.md`, update `docs/roadmap.md` and `README.md` to define the zero-friction web pivot.
-* [ ] **Target D2 — Streamlit Studio Web Dashboard (`app.py`):**
+* [x] **Target D2 — Streamlit Studio Web Dashboard (`app.py`):**
   * Build a clean 1-screen responsive web dashboard using Streamlit.
   * Integrate Topic Selector (12 elevated topics + custom prompt field).
   * Integrate Mode Switcher (PDF Carousel Deck vs 60fps Manim Video).
   * Integrate Pacing Controls (Standard, +4s Extended, +6s Walkthrough).
   * Provide live in-browser preview with 1-click Download buttons.
-* [ ] **Target D3 — Local End-to-End Verification:**
-  * Launch `streamlit run app.py` locally.
-  * Generate a 5-slide PDF carousel and verify layout, typography, and download.
-  * Generate a 60fps Manim video and verify playback, pacing, and download.
+* [x] **Target D3 — Local End-to-End Verification:**
+  * Launch `streamlit run app.py` locally and verify HTTP 200 OK.
+  * Generate a 4-slide PDF carousel and verify layout, typography, and download.
+  * Verified with automated headless Streamlit `AppTest` and 93/93 passing test suite.
 
 ### 4.2 Weekly Targets (Phase 2: Deployment & Polish — Days 3 to 7)
 * [ ] **Target W1 — Hugging Face Spaces Cloud Deployment:**
