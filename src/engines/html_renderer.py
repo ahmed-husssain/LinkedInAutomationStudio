@@ -41,10 +41,23 @@ async def get_browser() -> Browser:
         _running_loop = loop
 
         _playwright_instance = await async_playwright().start()
-        _browser_instance = await _playwright_instance.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
-        )
+        launch_args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+        try:
+            _browser_instance = await _playwright_instance.chromium.launch(
+                headless=True,
+                args=launch_args,
+            )
+        except Exception as exc:
+            if "executable doesn't exist" in str(exc).lower() or "playwright install" in str(exc).lower():
+                import sys
+                import subprocess
+                subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+                _browser_instance = await _playwright_instance.chromium.launch(
+                    headless=True,
+                    args=launch_args,
+                )
+            else:
+                raise
         return _browser_instance
 
 

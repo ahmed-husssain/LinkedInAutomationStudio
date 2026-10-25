@@ -1,3 +1,14 @@
+---
+title: LinkedIn Automation Studio
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: streamlit
+sdk_version: "1.35.0"
+app_file: app.py
+pinned: false
+---
+
 # 🚀 LinkedIn Automation Studio
 
 An autonomous, multi-agent content generation and publishing studio engineered to create viral, top 1% system architecture and backend engineering content for LinkedIn. Delivers ready-to-publish packages via a **Zero-Setup Web Studio (Streamlit / Hugging Face Spaces)** and Discord:
