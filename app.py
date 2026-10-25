@@ -1,5 +1,5 @@
 """
-LinkedIn Automation Studio — 1-Screen Zero-Install Web Dashboard.
+LinkedIn Automation Studio — Minimalist Linear/Vercel Monochrome Dashboard.
 Powered by Streamlit, Playwright, and Manim Community Edition.
 Generates 1080x1350 PDF Carousels and 60fps Manim Videos with $0 cloud cost.
 """
@@ -96,7 +96,7 @@ CURATED_TOPICS = {
 }
 
 # -----------------------------------------------------------------------------
-# Streamlit App Configuration & Modern Styling
+# Streamlit App Configuration & Linear / Vercel Monochrome Styling
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="LinkedIn Automation Studio",
@@ -108,54 +108,163 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Dark Slate Glassmorphic Theme */
+    /* Linear / Vercel Monochrome Design System */
     .stApp {
-        background: radial-gradient(circle at 50% 0%, #0f172a 0%, #030712 100%);
-        color: #f1f5f9;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: #000000;
+        color: #ededed;
+        font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
     }
-    .header-box {
+
+    /* Container Constrained Width for Calm Focus */
+    .block-container {
+        max-width: 900px !important;
+        padding-top: 2rem !important;
+        padding-bottom: 4rem !important;
+    }
+
+    /* Minimal Header */
+    .hero-container {
         text-align: center;
-        padding: 24px 16px 12px 16px;
-        background: rgba(15, 23, 42, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        backdrop-filter: blur(12px);
-        margin-bottom: 24px;
-    }
-    .header-title {
-        font-size: 2.2rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 6px;
-    }
-    .header-sub {
-        color: #94a3b8;
-        font-size: 1.05rem;
-        font-weight: 400;
-    }
-    .card-container {
-        background: rgba(15, 23, 42, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 14px;
-        padding: 20px;
-        margin-bottom: 16px;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #1a1a1a;
     }
     .badge-pill {
         display: inline-block;
-        padding: 4px 12px;
+        padding: 3px 10px;
         border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
-        background: rgba(56, 189, 248, 0.12);
-        color: #38bdf8;
-        border: 1px solid rgba(56, 189, 248, 0.3);
+        background: #111111;
+        color: #888888;
+        border: 1px solid #262626;
+        margin-bottom: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .hero-title {
+        font-size: 2.1rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: #ffffff;
         margin-bottom: 8px;
+    }
+    .hero-sub {
+        color: #737373;
+        font-size: 0.95rem;
+        font-weight: 400;
+        max-width: 580px;
+        margin: 0 auto;
+        line-height: 1.5;
+    }
+
+    /* Apple-style Interactive Press */
+    button, .stButton>button {
+        transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease !important;
+    }
+    button:active, .stButton>button:active {
+        transform: scale(0.98) !important;
+    }
+
+    /* Vercel Primary Button */
+    .stButton>button[kind="primary"] {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        border: 1px solid #ffffff !important;
+        padding: 0.65rem 1.5rem !important;
+        font-size: 0.95rem !important;
+        letter-spacing: -0.01em !important;
+    }
+    .stButton>button[kind="primary"]:hover {
+        background-color: #e5e5e5 !important;
+        border-color: #e5e5e5 !important;
+    }
+
+    /* Secondary Buttons */
+    .stButton>button[kind="secondary"] {
+        background-color: #0f0f0f !important;
+        color: #d4d4d4 !important;
+        border: 1px solid #222222 !important;
+        border-radius: 8px !important;
+        font-size: 0.85rem !important;
+    }
+    .stButton>button[kind="secondary"]:hover {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border-color: #333333 !important;
+    }
+
+    /* Card Containers */
+    .specimen-card {
+        background: #080808;
+        border: 1px solid #1a1a1a;
+        border-radius: 14px;
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+
+    /* Inputs */
+    .stTextInput>div>div>input {
+        background-color: #0a0a0a !important;
+        color: #ffffff !important;
+        border: 1px solid #222222 !important;
+        border-radius: 10px !important;
+        font-size: 0.95rem !important;
+        padding: 0.65rem 1rem !important;
+    }
+    .stTextInput>div>div>input:focus {
+        border-color: #555555 !important;
+        box-shadow: none !important;
+    }
+
+    /* Tabs Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #0a0a0a;
+        padding: 4px;
+        border-radius: 12px;
+        border: 1px solid #1c1c1c;
+        margin-bottom: 1.5rem;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 6px 16px;
+        color: #737373;
+        font-size: 0.85rem;
+        font-weight: 500;
+        border: none !important;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+    }
+
+    /* Expander Styling */
+    .streamlit-expanderHeader {
+        background-color: #080808 !important;
+        border: 1px solid #1c1c1c !important;
+        border-radius: 10px !important;
+        font-size: 0.85rem !important;
+        color: #888888 !important;
+    }
+    .streamlit-expanderContent {
+        background-color: #080808 !important;
+        border: 1px solid #1c1c1c !important;
+        border-top: none !important;
+        border-bottom-left-radius: 10px !important;
+        border-bottom-right-radius: 10px !important;
+    }
+
+    /* Code Block */
+    pre, code {
+        background-color: #050505 !important;
+        border: 1px solid #1a1a1a !important;
+        border-radius: 8px !important;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+        color: #d4d4d4 !important;
     }
     </style>
     """,
@@ -175,80 +284,79 @@ if "generated_video" not in st.session_state:
     st.session_state.generated_video = None
 if "generated_post" not in st.session_state:
     st.session_state.generated_post = None
-
+if "selected_topic_input" not in st.session_state:
+    st.session_state.selected_topic_input = "The JWT Revocation Dilemma (Stateful Revocation)"
 
 # -----------------------------------------------------------------------------
-# Header
+# Calm Editorial Header
 # -----------------------------------------------------------------------------
 st.markdown(
     """
-    <div class="header-box">
-        <span class="badge-pill">Production Media Factory</span>
-        <div class="header-title">LinkedIn Automation Studio</div>
-        <div class="header-sub">Generate publication-grade 1080x1350 PDF carousels & 60fps Manim vector videos in seconds.</div>
+    <div class="hero-container">
+        <span class="badge-pill">Staff-Level Engineering Studio</span>
+        <div class="hero-title">LinkedIn Automation Studio</div>
+        <div class="hero-sub">Generate publication-grade 2D architecture blueprints, 1080x1350 PDF carousels, and 60fps vector animations in seconds.</div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
 # -----------------------------------------------------------------------------
-# Control Stage: Two-Column Control Panel
+# Single-Column Hero Stage (Ruthless Restraint)
 # -----------------------------------------------------------------------------
-col_control, col_preview = st.columns([1, 1.2], gap="large")
+topic_input_val = st.text_input(
+    "What architecture concept are you breaking down?",
+    value=st.session_state.selected_topic_input,
+    placeholder="e.g. Distributed Consensus in Raft, 10M WebSockets Reconnect Storm...",
+    help="Type any software design topic or select a quick-preset below.",
+)
+st.session_state.selected_topic_input = topic_input_val
 
-with col_control:
-    st.markdown("### 1. Topic & Strategic Angle")
-    
-    topic_mode = st.radio(
-        "Topic Source",
-        ["Curated System Architecture Presets", "Custom Engineering Topic"],
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-    
-    if topic_mode == "Curated System Architecture Presets":
-        selected_key = st.selectbox(
-            "Select Architecture Topic",
-            options=list(CURATED_TOPICS.keys()),
-            format_func=lambda k: CURATED_TOPICS[k]["label"],
+# Quick-Select Presets
+col_p1, col_p2, col_p3, col_p4 = st.columns(4)
+with col_p1:
+    if st.button("⚡ JWT Dilemma", use_container_width=True):
+        st.session_state.selected_topic_input = CURATED_TOPICS["jwt_vs_sessions"]["label"]
+        st.rerun()
+with col_p2:
+    if st.button("⚡ Consistent Hashing", use_container_width=True):
+        st.session_state.selected_topic_input = CURATED_TOPICS["consistent_hashing"]["label"]
+        st.rerun()
+with col_p3:
+    if st.button("⚡ Kafka vs RabbitMQ", use_container_width=True):
+        st.session_state.selected_topic_input = CURATED_TOPICS["kafka_vs_rabbitmq"]["label"]
+        st.rerun()
+with col_p4:
+    if st.button("⚡ Cache Stampede", use_container_width=True):
+        st.session_state.selected_topic_input = CURATED_TOPICS["redis_cache_stampede"]["label"]
+        st.rerun()
+
+# -----------------------------------------------------------------------------
+# Progressive Disclosure: Collapsible Design Parameters
+# -----------------------------------------------------------------------------
+with st.expander("⚙️ Customize Parameters (Visual Theme, Deck Length, Video Engine)", expanded=False):
+    col_opt1, col_opt2 = st.columns(2)
+    with col_opt1:
+        topic_mode = st.radio(
+            "Topic Preset Library",
+            ["Curated System Architecture Presets", "Custom Engineering Topic"],
+            index=0 if any(cfg["label"] == st.session_state.selected_topic_input for cfg in CURATED_TOPICS.values()) else 1,
+            horizontal=True,
         )
-        topic_id = selected_key
-        topic_title = CURATED_TOPICS[selected_key]["default_title"]
-        video_id = CURATED_TOPICS[selected_key]["video_id"]
-    else:
-        topic_title = st.text_input(
-            "Enter Topic Title",
-            value="Consistent Hashing Ring Topology",
-            placeholder="e.g. Distributed Consensus in Raft",
-        )
-        topic_id = (
-            topic_title.lower()
-            .replace(" ", "_")
-            .replace(":", "")
-            .replace("-", "_")
-        )
-        video_id = "token_bucket"
-
-    st.markdown("---")
-    st.markdown("### 2. Format & Aesthetics")
-
-    format_choice = st.radio(
-        "Choose Primary Focus",
-        [
-            "📐 2D Architecture Blueprint & Post (Recommended)",
-            "📑 1080x1350 PDF Carousel (Document Deck)",
-            "🎬 60fps Manim 2D Animation (MP4 Video)",
-        ],
-    )
-
-    col_c1, col_c2 = st.columns(2)
-    with col_c1:
         theme_choice = st.selectbox(
-            "Visual Palette",
+            "Visual Palette Accent",
             options=list(CAROUSEL_THEMES.keys()),
             format_func=lambda t: f"{t.capitalize()} Accent",
         )
-    with col_c2:
+    with col_opt2:
+        format_choice = st.radio(
+            "Primary Visual Focus",
+            [
+                "📐 2D Architecture Blueprint & Post (Recommended)",
+                "📑 1080x1350 PDF Carousel (Document Deck)",
+                "🎬 60fps Manim 2D Animation (MP4 Video)",
+            ],
+        )
         slide_count = st.select_slider(
             "Carousel Deck Length",
             options=[3, 4, 5],
@@ -256,9 +364,29 @@ with col_control:
             help="3 = Fast takeaway, 4 = Incident breakdown, 5 = Deep architectural runbook",
         )
 
-    st.markdown("---")
-    generate_btn = st.button("🚀 Generate LinkedIn Content Package", type="primary", use_container_width=True)
+# Derive topic ID and Title
+matched_key = None
+for k, cfg in CURATED_TOPICS.items():
+    if cfg["label"].lower() in topic_input_val.lower() or cfg["default_title"].lower() in topic_input_val.lower():
+        matched_key = k
+        break
 
+if matched_key:
+    topic_id = matched_key
+    topic_title = CURATED_TOPICS[matched_key]["default_title"]
+    video_id = CURATED_TOPICS[matched_key]["video_id"]
+else:
+    topic_title = topic_input_val.strip() or "System Architecture Topology"
+    topic_id = (
+        topic_title.lower()
+        .replace(" ", "_")
+        .replace(":", "")
+        .replace("-", "_")
+    )
+    video_id = "token_bucket"
+
+st.write("")
+generate_btn = st.button("🚀 Generate LinkedIn Content Package", type="primary", use_container_width=True)
 
 # -----------------------------------------------------------------------------
 # Generation Logic
@@ -274,7 +402,7 @@ def run_async(coro):
 
 
 if generate_btn:
-    with st.spinner("Compiling technical specimens & rendering visual assets..."):
+    with st.spinner("Synthesizing architecture invariants & compiling high-res assets..."):
         output_dir = ROOT_DIR / "data" / "published"
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -343,143 +471,182 @@ Senior Discussion:
 #SystemDesign #DistributedSystems #SoftwareEngineering #Backend #SoftwareArchitecture"""
 
         st.session_state.generated_post = post_copy
-        st.success("Complete LinkedIn Architecture Package compiled!")
-
+        st.toast("LinkedIn Content Package compiled successfully!", icon="✅")
 
 # -----------------------------------------------------------------------------
-# Preview & Download Stage
+# Deliverables Stage: Apple Segmented Switcher
 # -----------------------------------------------------------------------------
-with col_preview:
-    st.markdown("### 3. Unified Live Preview Stage")
+if st.session_state.generated_diagram or st.session_state.generated_carousel or st.session_state.generated_video:
+    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
 
-    if st.session_state.generated_diagram or st.session_state.generated_carousel or st.session_state.generated_video:
-        tab_diag, tab_deck, tab_vid, tab_copy = st.tabs([
-            "📐 2D Architecture Blueprint",
-            "📑 4-Slide Carousel Deck",
-            "🎬 60fps Motion Video",
-            "📋 LinkedIn Post Copy",
-        ])
+    tab_diag, tab_deck, tab_vid, tab_copy = st.tabs([
+        "📐 2D Architecture Blueprint",
+        "📑 4-Slide Carousel Deck",
+        "🎬 60fps Motion Video",
+        "📋 LinkedIn Post Copy",
+    ])
 
-        with tab_diag:
-            if st.session_state.generated_diagram:
-                diag = st.session_state.generated_diagram
-                png_path = diag.get("png_path")
-                d2_url = diag.get("d2_url")
-                d2_script = diag.get("d2_script")
-                excal_file = diag.get("excalidraw_file")
+    with tab_diag:
+        if st.session_state.generated_diagram:
+            res = st.session_state.generated_diagram
+            st.markdown(
+                f"""
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <span style="font-family:ui-monospace; font-size:0.8rem; color:#888;">TOPOLOGY: 1080x1080 RETINA CARD</span>
+                    <span style="font-family:ui-monospace; font-size:0.8rem; color:#4ade80;">READY TO PUBLISH</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-                if png_path and Path(png_path).exists():
-                    st.image(str(png_path), use_container_width=True)
+            col_img, col_actions = st.columns([1.3, 1], gap="medium")
+            with col_img:
+                img = Image.open(res["png_path"])
+                st.image(img, use_container_width=True)
 
-                d_col1, d_col2, d_col3 = st.columns(3)
-                with d_col1:
-                    if png_path and Path(png_path).exists():
-                        with open(png_path, "rb") as f:
-                            png_bytes = f.read()
-                        st.download_button(
-                            "⬇️ Download PNG",
-                            data=png_bytes,
-                            file_name=Path(png_path).name,
-                            mime="image/png",
-                            type="primary",
-                            use_container_width=True,
-                        )
-                with d_col2:
-                    if d2_url:
-                        st.link_button("🚀 Open in D2 Playground", d2_url, use_container_width=True)
-                with d_col3:
-                    if excal_file and Path(excal_file).exists():
-                        with open(excal_file, "rb") as f:
-                            excal_bytes = f.read()
-                        st.download_button(
-                            "✏️ Download Excalidraw",
-                            data=excal_bytes,
-                            file_name=Path(excal_file).name,
-                            mime="application/json",
-                            use_container_width=True,
-                            help="Drag and drop this .excalidraw file into https://excalidraw.com to edit visually.",
-                        )
+            with col_actions:
+                st.markdown("#### Deliverable Assets")
+                st.markdown("Declarative architecture diagrams formatted for technical LinkedIn posts.")
 
-                if d2_script:
-                    with st.expander("Declarative D2 Diagram Script"):
-                        st.code(d2_script, language="d2")
+                with open(res["png_path"], "rb") as f:
+                    st.download_button(
+                        label="⬇️ Download Blueprint PNG",
+                        data=f.read(),
+                        file_name=res["png_path"].name,
+                        mime="image/png",
+                        use_container_width=True,
+                        type="primary",
+                    )
 
-        with tab_deck:
-            if st.session_state.generated_carousel:
-                carousel = st.session_state.generated_carousel
-                slides = carousel.get("slides", [])
-                pdf_path = carousel.get("pdf")
-                total_slides = len(slides)
-
-                if slides:
-                    curr_idx = st.session_state.current_slide_idx
-                    curr_idx = max(0, min(total_slides - 1, curr_idx))
-
-                    nav_c1, nav_c2, nav_c3 = st.columns([1, 2, 1])
-                    with nav_c1:
-                        if st.button("◀ Prev Slide", disabled=(curr_idx == 0), use_container_width=True, key="prev_slide_btn"):
-                            st.session_state.current_slide_idx -= 1
-                            st.rerun()
-                    with nav_c2:
-                        st.markdown(
-                            f"<div style='text-align: center; font-weight: 700; padding-top: 6px;'>Slide {curr_idx + 1} of {total_slides}</div>",
-                            unsafe_allow_html=True,
-                        )
-                    with nav_c3:
-                        if st.button("Next Slide ▶", disabled=(curr_idx >= total_slides - 1), use_container_width=True, key="next_slide_btn"):
-                            st.session_state.current_slide_idx += 1
-                            st.rerun()
-
-                    active_slide_path = slides[curr_idx]
-                    if Path(active_slide_path).exists():
-                        img = Image.open(active_slide_path)
-                        st.image(img, use_container_width=True)
-
-                    if pdf_path and Path(pdf_path).exists():
-                        with open(pdf_path, "rb") as f:
-                            pdf_bytes = f.read()
-                        st.download_button(
-                            label=f"⬇️ Download 1080x1350 Carousel Deck ({total_slides} Slides PDF)",
-                            data=pdf_bytes,
-                            file_name=Path(pdf_path).name,
-                            mime="application/pdf",
-                            type="primary",
-                            use_container_width=True,
-                        )
-
-        with tab_vid:
-            if st.session_state.generated_video and Path(st.session_state.generated_video).exists():
-                video_path = st.session_state.generated_video
-                st.video(str(video_path))
-                with open(video_path, "rb") as f:
-                    video_bytes = f.read()
-                st.download_button(
-                    label="⬇️ Download 60fps Vector Video (MP4)",
-                    data=video_bytes,
-                    file_name=Path(video_path).name,
-                    mime="video/mp4",
-                    type="primary",
+                st.link_button(
+                    label="🚀 Open in D2 Playground (1-Click)",
+                    url=res["d2_url"],
                     use_container_width=True,
                 )
-            else:
-                st.info("Render a 60fps motion video for this topic on demand.")
-                if st.button("🎬 Render 60fps Vector Animation", use_container_width=True, key="render_vid_on_demand"):
-                    with st.spinner("Rendering Manim 60fps vector scene..."):
-                        vpath = run_async(
-                            render_parameterized_animation_async(
-                                animation_id=video_id,
-                                force_render=False,
-                            )
-                        )
-                        st.session_state.generated_video = vpath
-                        st.rerun()
 
-        with tab_copy:
-            if st.session_state.generated_post:
-                st.text_area(
-                    "Ready-to-publish developer post caption:",
-                    value=st.session_state.generated_post,
-                    height=300,
+                with open(res["excalidraw_file"], "rb") as f:
+                    st.download_button(
+                        label="✏️ Download Excalidraw Whiteboard (.excalidraw)",
+                        data=f.read(),
+                        file_name=res["excalidraw_file"].name,
+                        mime="application/json",
+                        use_container_width=True,
+                    )
+
+                with st.expander("View Declarative D2 Code", expanded=False):
+                    st.code(res["d2_script"], language="yaml")
+
+    with tab_deck:
+        if st.session_state.generated_carousel:
+            c_res = st.session_state.generated_carousel
+            slides = c_res.get("slide_images", [])
+
+            if slides:
+                cur_idx = st.session_state.current_slide_idx
+                st.markdown(
+                    f"""
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-family:ui-monospace; font-size:0.8rem; color:#888;">SLIDE {cur_idx + 1} OF {len(slides)} (1080x1350)</span>
+                        <span style="font-family:ui-monospace; font-size:0.8rem; color:#38bdf8;">PDF DOCUMENT READY</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
-    else:
-        st.info("Enter your topic or pick a preset on the left, then click **[🚀 Generate LinkedIn Content Package]** to preview.")
+
+                col_slide_img, col_deck_actions = st.columns([1.3, 1], gap="medium")
+                with col_slide_img:
+                    st.image(slides[cur_idx], use_container_width=True)
+
+                    nav_prev, nav_count, nav_next = st.columns([1, 2, 1])
+                    with nav_prev:
+                        if st.button("← Previous", use_container_width=True, key="btn_prev_slide"):
+                            st.session_state.current_slide_idx = (cur_idx - 1) % len(slides)
+                            st.rerun()
+                    with nav_count:
+                        st.markdown(
+                            f"<div style='text-align:center; padding-top:8px; font-family:ui-monospace; color:#888; font-size:0.85rem;'>Slide {cur_idx + 1} / {len(slides)}</div>",
+                            unsafe_allow_html=True,
+                        )
+                    with nav_next:
+                        if st.button("Next →", use_container_width=True, key="btn_next_slide"):
+                            st.session_state.current_slide_idx = (cur_idx + 1) % len(slides)
+                            st.rerun()
+
+                with col_deck_actions:
+                    st.markdown("#### Carousel Document Deck")
+                    st.markdown("Export as a native LinkedIn PDF document for maximum algorithm engagement.")
+
+                    with open(c_res["pdf_path"], "rb") as f:
+                        st.download_button(
+                            label=f"⬇️ Download Complete {len(slides)}-Slide PDF",
+                            data=f.read(),
+                            file_name=c_res["pdf_path"].name,
+                            mime="application/pdf",
+                            use_container_width=True,
+                            type="primary",
+                        )
+
+                    st.markdown("---")
+                    st.markdown(
+                        """
+                        **LinkedIn Publishing Tip:**
+                        Upload the PDF as a document. LinkedIn automatically renders document files into a native, swipeable carousel widget.
+                        """
+                    )
+
+    with tab_vid:
+        if st.session_state.generated_video and Path(st.session_state.generated_video).exists():
+            v_path = Path(st.session_state.generated_video)
+            col_v_play, col_v_actions = st.columns([1.3, 1], gap="medium")
+            with col_v_play:
+                st.video(str(v_path))
+            with col_v_actions:
+                st.markdown("#### 60fps Vector Animation")
+                st.markdown("Rendered via Manim Community Edition with 60fps smooth physics.")
+                with open(v_path, "rb") as f:
+                    st.download_button(
+                        label="⬇️ Download 60fps MP4",
+                        data=f.read(),
+                        file_name=v_path.name,
+                        mime="video/mp4",
+                        use_container_width=True,
+                        type="primary",
+                    )
+        else:
+            st.info("💡 To generate a 60fps Manim video alongside your blueprint, expand 'Customize Parameters' and select '60fps Manim 2D Animation'.")
+
+    with tab_copy:
+        if st.session_state.generated_post:
+            st.markdown("#### Formatted LinkedIn Post Copy")
+            st.code(st.session_state.generated_post, language="markdown")
+else:
+    # Quiet Minimalist Feature Summary (Zero Clutter Before Action)
+    st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style="background:#080808; border:1px solid #1a1a1a; border-radius:14px; padding:24px;">
+            <div style="font-family:ui-monospace; font-size:0.75rem; color:#888; text-transform:uppercase; margin-bottom:12px; letter-spacing:0.05em;">
+                PUBLICATION SUITE CAPABILITIES
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:16px;">
+                <div style="border-left: 2px solid #38bdf8; padding-left:12px;">
+                    <div style="font-weight:600; font-size:0.9rem; color:#fff;">2D Architecture Blueprint</div>
+                    <div style="font-size:0.8rem; color:#737373; margin-top:4px;">1080x1080 card + D2 script + Excalidraw file</div>
+                </div>
+                <div style="border-left: 2px solid #818cf8; padding-left:12px;">
+                    <div style="font-weight:600; font-size:0.9rem; color:#fff;">4-Slide Carousel Deck</div>
+                    <div style="font-size:0.8rem; color:#737373; margin-top:4px;">1080x1350 PDF document formatted for LinkedIn</div>
+                </div>
+                <div style="border-left: 2px solid #34d399; padding-left:12px;">
+                    <div style="font-weight:600; font-size:0.9rem; color:#fff;">60fps Vector Video</div>
+                    <div style="font-size:0.8rem; color:#737373; margin-top:4px;">Manim mathematical motion simulation</div>
+                </div>
+                <div style="border-left: 2px solid #f59e0b; padding-left:12px;">
+                    <div style="font-weight:600; font-size:0.9rem; color:#fff;">LinkedIn Post Copy</div>
+                    <div style="font-size:0.8rem; color:#737373; margin-top:4px;">Staff-level mental model & discussion hook</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
