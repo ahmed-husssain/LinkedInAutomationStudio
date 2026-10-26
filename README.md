@@ -162,4 +162,3 @@ We are building the open-source standard for engineering communication. If you w
 ## 📜 License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
