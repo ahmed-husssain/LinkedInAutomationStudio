@@ -1,4 +1,3 @@
----
 # 🚀 LinkedIn Automation Studio
 ### The Open-Source Visual Compiler for System Design & Engineering Content
 
