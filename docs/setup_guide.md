@@ -159,9 +159,18 @@ Before launching, run the automated test suite to ensure your environment is 100
 ```bash
 python -m pytest -v
 ```
-You should see all 39 tests pass with green `PASSED` marks.
 
-### 6.2 Launch the Bot
+### 6.2 Option A: Launch the Interactive Web Studio (Recommended)
+```bash
+# Install headless browser for vector PDF rendering (one-time command)
+playwright install chromium
+
+# Launch local dashboard
+streamlit run app.py
+```
+Open **`http://localhost:8501`** in your browser. You get an interactive visual dashboard with real-time 1080×1350 slide previews, parameter tweaking, and one-click PDF & 60fps Manim video downloads.
+
+### 6.3 Option B: Launch the Discord Autopilot Bot
 Start the bot runner:
 ```bash
 python main.py
