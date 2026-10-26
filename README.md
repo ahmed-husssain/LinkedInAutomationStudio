@@ -10,12 +10,22 @@ pinned: false
 ---
 
 # 🚀 LinkedIn Automation Studio
+### The Open-Source Visual Compiler for System Design & Engineering Content
 
-An autonomous, multi-agent content generation and publishing studio engineered to create viral, top 1% system architecture and backend engineering content for LinkedIn. Delivers ready-to-publish packages via a **Zero-Setup Web Studio (Streamlit / Hugging Face Spaces)** and Discord:
-1. **Interactive 1080x1350 PDF Carousels** (Vertical document decks with zero dead space and real architecture specimens).
-2. **2D Animated Motion Graphics** (1080p 60fps Manim CE videos with human-calibrated pacing).
-3. **High-Contrast Architecture Diagrams** (1080x1080 multi-theme vector technical covers).
-4. **Authentic Developer Post Copy** (Crafted with hook, mental model, and senior discussion prompts).
+[![GitHub Repository](https://img.shields.io/badge/GitHub-ahmed--husssain%2FLinkedInAutomationStudio-blue?logo=github)](https://github.com/ahmed-husssain/LinkedInAutomationStudio)
+[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-cyan.svg)](https://www.python.org/)
+[![Cloud Cost](https://img.shields.io/badge/Cloud%20Cost-%240%20(Local%20%2F%20HF)-brightgreen)](#)
+
+An open-source visual compiler and multi-agent studio engineered to eliminate AI hallucinations in technical content. Instead of wrestling with Figma layers or dragging boxes in Canva, `LinkedInAutomationStudio` verifies architecture logic via native Python `ast.parse()` and compiles 3 publication-ready visual formats automatically for **$0 in cloud fees**:
+
+1. **📑 1080×1350 Vector PDF Carousels** — Native 4:5 vertical document decks with crisp vector typography and real architecture specimens via headless Playwright Chromium.
+2. **🎬 60fps Mathematical Explainer Videos** — 1080p 60fps animations engineered with Grant Sanderson's Manim CE (3Blue1Brown) motion engine.
+3. **📊 2D System Architecture Schematics** — High-contrast vector SVGs and PNGs ready for RFCs, technical blogs, and documentation.
+4. **💡 Senior Developer Post Copy** — Formatted with technical hooks, mental models, and architectural discussion prompts.
+
+> 🌐 **GitHub Repository:** [https://github.com/ahmed-husssain/LinkedInAutomationStudio](https://github.com/ahmed-husssain/LinkedInAutomationStudio)  
+> 💻 **Live Studio:** Runs locally via Streamlit or deployable to free Hugging Face Spaces with zero SaaS subscriptions.
 
 ---
 
@@ -42,25 +52,25 @@ This repository features a comprehensive **Agent Context Harness** and documenta
 
 ## 🏗️ Multi-Agent Architecture
 
-The studio operates as a zero-bloat, native Python multi-agent system:
+The studio operates as a deterministic, native Python multi-agent pipeline:
 
 ```
-User Prompt (Discord / Autopilot)
+User Topic (Streamlit Web Studio / Discord Autopilot)
        │
        ▼
-[ Content Strategist Agent ] ──► Brainstorms authentic hook, mental model & slide breakdown
+[ Content Strategist Agent ] ──► Brainstorms technical hook, failure modes & slide blueprint
        │
        ▼
-[ Staff Engineer Critic Agent ] ◄── Adversarial review: kills buzzwords, fact-checks mechanics
-       │ (Score < 80? Auto-refinement loop)
+[ Adversarial Critic Gate ] ◄── Python ast.parse() validation: rejects syntax errors & hallucinations
+       │ (Score < 80? Auto-repair loop)
        ▼
-[ Multi-Modal Renderers ]
-   ├── 📑 PDF Carousel Architect (1080x1350 Pillow document compiler)
-   ├── 🎬 Base Studio Scene (1080x1080 Manim CE 2D motion graphics)
-   └── 📊 Diagram Engine (1080x1080 multi-theme vector technical covers)
+[ High-Performance Compilers ]
+   ├── 📑 Playwright Vector Engine (1080x1350 4:5 document PDF carousel)
+   ├── 🎬 Manim CE Cairo Pipeline (1080p 60fps mathematical animation MP4)
+   └── 📊 Diagram Engine (1080x1080 multi-theme vector technical schematics)
        │
        ▼
-[ Discord Delivery Gateway ] ──► 1-tap interactive post delivery & camera-roll downloads
+[ Deliverable Gateways ] ──► Streamlit Web Studio (1-Click Download) + Discord Delivery Gateway
 ```
 
 ---
@@ -101,27 +111,49 @@ Fill in your credentials in `.env`:
 * `DISCORD_BOT_TOKEN`: From the [Discord Developer Portal](https://discord.com/developers/applications) (enable **Message Content Intent**).
 * `GEMINI_API_KEY`: From [Google AI Studio](https://aistudio.google.com/).
 
-### 3. Run Test Suite
+### 3. Launch Studio
+
+#### Option A: Interactive Web Studio (Recommended)
+```bash
+streamlit run app.py
+```
+Open `http://localhost:8501` to preview 1080×1350 carousels, tweak parameters, and export vector PDFs and 60fps Manim videos with $0 cloud cost.
+
+#### Option B: Autopilot Discord Bot
+```bash
+python main.py
+```
+
+### 4. Run Test Suite
 
 ```bash
 python -m pytest -v
 ```
 
-### 4. Launch Studio Discord Bot
+---
 
-```bash
-python main.py
-```
+## 🤝 Contributing & Good First Issues
+
+We are building the open-source standard for engineering communication. If you want to contribute, check out these curated issues:
+
+* **[Issue #12: New Manim Animation Scenes](https://github.com/ahmed-husssain/LinkedInAutomationStudio/issues/12)** (`Python` · `Manim CE`)  
+  Add animated scenes for distributed systems: Raft consensus elections, two-phase commit, and token bucket rate limiters.
+* **[Issue #15: Web Studio UI & Slide Previewer](https://github.com/ahmed-husssain/LinkedInAutomationStudio/issues/15)** (`Streamlit` · `Frontend`)  
+  Build live parameter tweaking, hot-reload slide preview canvas, and dynamic theme palette switcher.
+* **[Issue #21: Critic Evaluation & Pytest Suites](https://github.com/ahmed-husssain/LinkedInAutomationStudio/issues/21)** (`pytest` · `AST` · `Evals`)  
+  Extend the Adversarial Critic with automated Python code linting, race-condition checks, and benchmarks.
+
+👉 **Explore all issues:** [https://github.com/ahmed-husssain/LinkedInAutomationStudio/issues](https://github.com/ahmed-husssain/LinkedInAutomationStudio/issues)
 
 ---
 
-## 🤖 CI/CD & CodeRabbit AI Review
+## 🤖 CI/CD & Security Audits
 
 - **GitHub Actions (`.github/workflows/ci.yml`):**
-  - Static security audit with `bandit` (0 High issues required).
+  - Static security audit with `bandit` on `src/`, `app.py`, and `main.py` (0 High issues required).
   - Secret leak prevention guard.
-  - Python syntax validation with `flake8`.
-  - Automated 39-test adversarial test suite on all pushes and PRs.
+  - Python syntax and linting validation with `flake8`.
+  - Automated 100+ test suite on all pushes and PRs.
 - **CodeRabbit (`.coderabbit.yaml`):**
   - Automated PR reviews enforcing collision-free visual design system rules, zero secrets, and senior minimalism.
 
@@ -130,3 +162,4 @@ python main.py
 ## 📜 License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
