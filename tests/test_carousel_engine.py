@@ -160,3 +160,29 @@ def test_carousel_feedback_incorporation():
     assert custom_feedback in s_refined[0]["stage_html"]
     assert custom_feedback in s_refined[3]["stage_html"]
 
+
+def test_carousel_html_escapes_injection_payloads():
+    """Security Regression: Verifies that HTML injection payloads in slide title/metadata are escaped."""
+    from src.engines.carousel_engine import build_carousel_slide_html
+
+    slide = {
+        "title": "<script>alert('xss')</script>",
+        "subtitle": '<img src=x onerror="alert(1)">',
+        "badge": "BADGE<b>BOLD</b>",
+        "slide_number": 1,
+        "stage_html": "<div>Safe Internal SVG</div>",
+        "metric_1_label": "M1<script>",
+        "metric_1_val": "V1",
+        "metric_2_label": "M2",
+        "metric_2_val": "V2",
+        "swipe_hint": "Swipe<img src=x>",
+    }
+    rendered = build_carousel_slide_html(slide, theme="cyan")
+
+    assert "<script>alert('xss')</script>" not in rendered
+    assert '<img src=x onerror="alert(1)">' not in rendered
+    assert "<b>BOLD</b>" not in rendered
+    assert "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;" in rendered
+    assert "&lt;script&gt;" in rendered
+
+

@@ -4,6 +4,7 @@ Creates ByteByteGo / Stripe-grade architecture cards using headless HTML/Tailwin
 rendering via Playwright, with zero-regression fallback to Pillow.
 """
 
+import html
 import json
 import base64
 import zlib
@@ -96,8 +97,8 @@ def _build_html_markup(
     accent = theme_data["accent"]
     glow = theme_data["glow"]
 
-    clean_title = (title or topic_id).strip()[:50]
-    clean_tagline = (tagline or "Production Architecture & High-Scale Resilience").strip()[:80]
+    clean_title = html.escape((title or topic_id).strip()[:50])
+    clean_tagline = html.escape((tagline or "Production Architecture & High-Scale Resilience").strip()[:80])
 
     # Dynamic tier mapping based on topic
     tier1_title = "Client Application"

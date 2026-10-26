@@ -7,6 +7,7 @@ Zero added dependencies; uses Playwright Chromium with native Pillow fallback.
 
 import os
 import re
+import html as html_lib
 import asyncio
 import logging
 from pathlib import Path
@@ -367,8 +368,11 @@ def resolve_topic_profile(
     # Apply user feedback customization if provided
     if feedback:
         fb_clean = feedback.strip()
-        profile["rule_1"] = (f"Refined Constraint: {fb_clean[:32]}", f"Addressed user architectural feedback: {fb_clean}")
-        profile["feedback_note"] = fb_clean
+        profile["rule_1"] = (
+            f"Refined Constraint: {html_lib.escape(fb_clean[:32])}",
+            f"Addressed user architectural feedback: {html_lib.escape(fb_clean)}"
+        )
+        profile["feedback_note"] = html_lib.escape(fb_clean)
 
     return profile
 
@@ -763,8 +767,18 @@ def build_carousel_slide_html(
         "{{FOOTER_TEXT}}": "LinkedIn Automation Studio • Staff Engineering Series",
         "{{SWIPE_HINT}}": slide_data.get("swipe_hint", "Swipe →"),
     }
+    raw_placeholders = {
+        "{{STAGE_HTML}}",
+        "{{THEME_ACCENT}}",
+        "{{THEME_GLOW}}",
+        "{{CANVAS_WIDTH}}",
+        "{{CANVAS_HEIGHT}}",
+        "{{SLIDE_NUMBER}}",
+        "{{TOTAL_SLIDES}}",
+    }
     for placeholder, val in replacements.items():
-        html = html.replace(placeholder, str(val))
+        val_str = str(val) if placeholder in raw_placeholders else html_lib.escape(str(val))
+        html = html.replace(placeholder, val_str)
     return html
 
 
