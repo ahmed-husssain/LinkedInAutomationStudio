@@ -79,3 +79,11 @@ logs/
 .DS_Store
 Thumbs.db
 ehthumbs.db
+
+# =====================================================================
+# Local Agent & Scratch Artifacts
+# =====================================================================
+.agents/
+scripts/
+carousel_studio.html
+/*.html
