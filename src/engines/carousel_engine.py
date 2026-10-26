@@ -7,6 +7,7 @@ Zero added dependencies; uses Playwright Chromium with native Pillow fallback.
 
 import os
 import re
+import html as html_lib
 import asyncio
 import logging
 from pathlib import Path
@@ -367,8 +368,11 @@ def resolve_topic_profile(
     # Apply user feedback customization if provided
     if feedback:
         fb_clean = feedback.strip()
-        profile["rule_1"] = (f"Refined Constraint: {fb_clean[:32]}", f"Addressed user architectural feedback: {fb_clean}")
-        profile["feedback_note"] = fb_clean
+        profile["rule_1"] = (
+            f"Refined Constraint: {html_lib.escape(fb_clean[:32])}",
+            f"Addressed user architectural feedback: {html_lib.escape(fb_clean)}"
+        )
+        profile["feedback_note"] = html_lib.escape(fb_clean)
 
     return profile
 
@@ -763,8 +767,18 @@ def build_carousel_slide_html(
         "{{FOOTER_TEXT}}": "LinkedIn Automation Studio • Staff Engineering Series",
         "{{SWIPE_HINT}}": slide_data.get("swipe_hint", "Swipe →"),
     }
+    raw_placeholders = {
+        "{{STAGE_HTML}}",
+        "{{THEME_ACCENT}}",
+        "{{THEME_GLOW}}",
+        "{{CANVAS_WIDTH}}",
+        "{{CANVAS_HEIGHT}}",
+        "{{SLIDE_NUMBER}}",
+        "{{TOTAL_SLIDES}}",
+    }
     for placeholder, val in replacements.items():
-        html = html.replace(placeholder, str(val))
+        val_str = str(val) if placeholder in raw_placeholders else html_lib.escape(str(val))
+        html = html.replace(placeholder, val_str)
     return html
 
 
@@ -804,7 +818,10 @@ async def generate_carousel_async(
     width = canvas_spec["width"]
     height = canvas_spec["height"]
 
-    pdf_path = target_dir / f"{topic_id}_Carousel_{theme}.pdf"
+    safe_topic_id = Path(topic_id).name
+    pdf_path = (target_dir / f"{safe_topic_id}_Carousel_{theme}.pdf").resolve()
+    if not pdf_path.is_relative_to(target_dir.resolve()):
+        raise ValueError(f"Security: Destination path '{pdf_path}' escapes output directory '{target_dir}'")
     slide_paths: List[Path] = []
     pil_images: List[Image.Image] = []
 
@@ -812,7 +829,9 @@ async def generate_carousel_async(
 
     for slide in slides:
         num = slide.get("slide_number", 1)
-        slide_png = target_dir / f"{topic_id}_Slide_{num}_{theme}.png"
+        slide_png = (target_dir / f"{safe_topic_id}_Slide_{num}_{theme}.png").resolve()
+        if not slide_png.is_relative_to(target_dir.resolve()):
+            raise ValueError(f"Security: Destination path '{slide_png}' escapes output directory '{target_dir}'")
         slide_paths.append(slide_png)
 
         if not slide_png.exists() or overwrite:

@@ -160,3 +160,49 @@ def test_carousel_feedback_incorporation():
     assert custom_feedback in s_refined[0]["stage_html"]
     assert custom_feedback in s_refined[3]["stage_html"]
 
+
+def test_carousel_html_escapes_injection_payloads():
+    """Security Regression: Verifies that HTML injection payloads in slide title/metadata are escaped."""
+    from src.engines.carousel_engine import build_carousel_slide_html
+
+    slide = {
+        "title": "<script>alert('xss')</script>",
+        "subtitle": '<img src=x onerror="alert(1)">',
+        "badge": "BADGE<b>BOLD</b>",
+        "slide_number": 1,
+        "stage_html": "<div>Safe Internal SVG</div>",
+        "metric_1_label": "M1<script>",
+        "metric_1_val": "V1",
+        "metric_2_label": "M2",
+        "metric_2_val": "V2",
+        "swipe_hint": "Swipe<img src=x>",
+    }
+    rendered = build_carousel_slide_html(slide, theme="cyan")
+
+    assert "<script>alert('xss')</script>" not in rendered
+    assert '<img src=x onerror="alert(1)">' not in rendered
+    assert "<b>BOLD</b>" not in rendered
+    assert "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;" in rendered
+    assert "&lt;script&gt;" in rendered
+
+
+def test_carousel_output_path_confinement(tmp_path: Path):
+    """Security Regression: Verifies that directory traversal payloads in topic_id cannot escape target_dir."""
+    from src.engines.carousel_engine import generate_carousel_async
+    import asyncio
+
+    traversal_topic = "../../escaped_carousel"
+    res = asyncio.run(generate_carousel_async(
+        topic_id=traversal_topic,
+        title="Carousel Traversal Test",
+        output_dir=tmp_path,
+        theme="cyan",
+        overwrite=True,
+    ))
+    assert res["pdf"].resolve().is_relative_to(tmp_path.resolve())
+    for s_path in res["slides"]:
+        assert s_path.resolve().is_relative_to(tmp_path.resolve())
+    assert not (tmp_path.parent / "escaped_carousel_Carousel_cyan.pdf").exists()
+
+
+

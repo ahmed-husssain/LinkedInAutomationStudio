@@ -4,6 +4,7 @@ Creates ByteByteGo / Stripe-grade architecture cards using headless HTML/Tailwin
 rendering via Playwright, with zero-regression fallback to Pillow.
 """
 
+import html
 import json
 import base64
 import zlib
@@ -96,8 +97,8 @@ def _build_html_markup(
     accent = theme_data["accent"]
     glow = theme_data["glow"]
 
-    clean_title = (title or topic_id).strip()[:50]
-    clean_tagline = (tagline or "Production Architecture & High-Scale Resilience").strip()[:80]
+    clean_title = html.escape((title or topic_id).strip()[:50])
+    clean_tagline = html.escape((tagline or "Production Architecture & High-Scale Resilience").strip()[:80])
 
     # Dynamic tier mapping based on topic
     tier1_title = "Client Application"
@@ -181,7 +182,10 @@ async def generate_technical_diagram_async(
     target_dir = output_dir or THUMBNAILS_DIR
     target_dir.mkdir(parents=True, exist_ok=True)
     suffix = f"_{ratio_key}" if ratio_key != "square" else ""
-    out_file = target_dir / f"{topic_id}_Diagram_{theme}{suffix}.png"
+    safe_topic_id = Path(topic_id).name
+    out_file = (target_dir / f"{safe_topic_id}_Diagram_{theme}{suffix}.png").resolve()
+    if not out_file.is_relative_to(target_dir.resolve()):
+        raise ValueError(f"Security: Destination path '{out_file}' escapes output directory '{target_dir}'")
 
     if out_file.exists() and not overwrite:
         return out_file
@@ -226,7 +230,10 @@ def _generate_diagram_pillow(
     accent_color = theme_data["accent"]
 
     if out_file is None:
-        out_file = target_dir / f"{topic_id}_Diagram_{theme}.png"
+        safe_topic_id = Path(topic_id).name
+        out_file = (target_dir / f"{safe_topic_id}_Diagram_{theme}.png").resolve()
+        if not out_file.is_relative_to(target_dir.resolve()):
+            raise ValueError(f"Security: Destination path '{out_file}' escapes output directory '{target_dir}'")
     if out_file.exists() and not overwrite:
         return out_file
 
@@ -585,12 +592,17 @@ async def generate_diagram_package_async(
     # 2. Build D2 script & URL
     d2_script = build_d2_script(topic_id, title, profile=prof, theme=theme)
     d2_url = build_d2_playground_url(d2_script)
-    d2_file = target_dir / f"{topic_id}_architecture.d2"
+    safe_topic_id = Path(topic_id).name
+    d2_file = (target_dir / f"{safe_topic_id}_architecture.d2").resolve()
+    if not d2_file.is_relative_to(target_dir.resolve()):
+        raise ValueError(f"Security: Destination path '{d2_file}' escapes output directory '{target_dir}'")
     d2_file.write_text(d2_script, encoding="utf-8")
 
     # 3. Build Excalidraw JSON & save file
     excal_data = build_excalidraw_json(topic_id, title, profile=prof, theme=theme)
-    excal_file = target_dir / f"{topic_id}_architecture.excalidraw"
+    excal_file = (target_dir / f"{safe_topic_id}_architecture.excalidraw").resolve()
+    if not excal_file.is_relative_to(target_dir.resolve()):
+        raise ValueError(f"Security: Destination path '{excal_file}' escapes output directory '{target_dir}'")
     excal_file.write_text(json.dumps(excal_data, indent=2), encoding="utf-8")
 
     return {

@@ -91,3 +91,37 @@ def test_generate_diagram_package_sync(tmp_path: Path):
     assert res["png_path"].exists()
     assert res["d2_file"].exists()
     assert res["excalidraw_file"].exists()
+
+
+def test_diagram_markup_escapes_html_injection():
+    """Security Regression: Verifies that HTML injection payloads in title/tagline are properly escaped."""
+    from src.engines.diagram_engine import _build_html_markup
+
+    payload = '<img src=x onerror="alert(1)">'
+    markup = _build_html_markup("test_topic", payload, "tag<script>alert(2)</script>", "cyan")
+
+    assert payload not in markup
+    assert "<script>alert(2)</script>" not in markup
+    assert "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;" in markup
+    assert "tag&lt;script&gt;alert(2)&lt;/script&gt;" in markup
+
+
+def test_diagram_output_path_confinement(tmp_path: Path):
+    """Security Regression: Verifies that directory traversal payloads in topic_id cannot escape target_dir."""
+    from src.engines.diagram_engine import generate_diagram_package
+
+    traversal_topic = "../../escaped_diagram"
+    res = generate_diagram_package(
+        topic_id=traversal_topic,
+        title="Traversal Attack Test",
+        output_dir=tmp_path,
+        theme="cyan",
+        overwrite=True,
+    )
+    # The generated artifacts must reside strictly inside tmp_path
+    assert res["png_path"].resolve().is_relative_to(tmp_path.resolve())
+    assert res["d2_file"].resolve().is_relative_to(tmp_path.resolve())
+    assert res["excalidraw_file"].resolve().is_relative_to(tmp_path.resolve())
+    assert not (tmp_path.parent / "escaped_diagram_architecture.d2").exists()
+
+
