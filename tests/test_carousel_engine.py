@@ -186,3 +186,23 @@ def test_carousel_html_escapes_injection_payloads():
     assert "&lt;script&gt;" in rendered
 
 
+def test_carousel_output_path_confinement(tmp_path: Path):
+    """Security Regression: Verifies that directory traversal payloads in topic_id cannot escape target_dir."""
+    from src.engines.carousel_engine import generate_carousel_async
+    import asyncio
+
+    traversal_topic = "../../escaped_carousel"
+    res = asyncio.run(generate_carousel_async(
+        topic_id=traversal_topic,
+        title="Carousel Traversal Test",
+        output_dir=tmp_path,
+        theme="cyan",
+        overwrite=True,
+    ))
+    assert res["pdf"].resolve().is_relative_to(tmp_path.resolve())
+    for s_path in res["slides"]:
+        assert s_path.resolve().is_relative_to(tmp_path.resolve())
+    assert not (tmp_path.parent / "escaped_carousel_Carousel_cyan.pdf").exists()
+
+
+

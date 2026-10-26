@@ -5,6 +5,7 @@ Generates 1080x1350 PDF Carousels and 60fps Manim Videos with $0 cloud cost.
 """
 
 import sys
+import re
 import asyncio
 from pathlib import Path
 
@@ -383,12 +384,7 @@ if matched_key:
     video_id = CURATED_TOPICS[matched_key]["video_id"]
 else:
     topic_title = topic_input_val.strip() or "System Architecture Topology"
-    topic_id = (
-        topic_title.lower()
-        .replace(" ", "_")
-        .replace(":", "")
-        .replace("-", "_")
-    )
+    topic_id = re.sub(r"[^a-zA-Z0-9_-]", "_", topic_title.lower()).strip("_") or "custom_topic"
     video_id = "token_bucket"
 
 st.write("")

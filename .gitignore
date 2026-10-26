@@ -87,3 +87,5 @@ ehthumbs.db
 scripts/
 carousel_studio.html
 /*.html
+/*.pdf
+/*.png

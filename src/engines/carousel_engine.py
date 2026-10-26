@@ -818,7 +818,10 @@ async def generate_carousel_async(
     width = canvas_spec["width"]
     height = canvas_spec["height"]
 
-    pdf_path = target_dir / f"{topic_id}_Carousel_{theme}.pdf"
+    safe_topic_id = Path(topic_id).name
+    pdf_path = (target_dir / f"{safe_topic_id}_Carousel_{theme}.pdf").resolve()
+    if not pdf_path.is_relative_to(target_dir.resolve()):
+        raise ValueError(f"Security: Destination path '{pdf_path}' escapes output directory '{target_dir}'")
     slide_paths: List[Path] = []
     pil_images: List[Image.Image] = []
 
@@ -826,7 +829,9 @@ async def generate_carousel_async(
 
     for slide in slides:
         num = slide.get("slide_number", 1)
-        slide_png = target_dir / f"{topic_id}_Slide_{num}_{theme}.png"
+        slide_png = (target_dir / f"{safe_topic_id}_Slide_{num}_{theme}.png").resolve()
+        if not slide_png.is_relative_to(target_dir.resolve()):
+            raise ValueError(f"Security: Destination path '{slide_png}' escapes output directory '{target_dir}'")
         slide_paths.append(slide_png)
 
         if not slide_png.exists() or overwrite:
