@@ -42,7 +42,7 @@ jobs:
       - name: Static Security Scan (Bandit)
         run: |
           # Generate Bandit JSON report
-          bandit -r src/ -f json -o bandit-report.json || true
+          bandit -r src/ app.py main.py -f json -o bandit-report.json || true
           # Parse and fail if any HIGH severity security issues exist
           python - <<'PY'
           import json, sys
@@ -67,9 +67,9 @@ jobs:
       - name: Code Quality & Syntax Verification (Flake8)
         run: |
           # Stop build if there are Python syntax errors or undefined names
-          flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 src/ tests/ app.py main.py --count --select=E9,F63,F7,F82 --show-source --statistics
           # Exit-zero treat all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 src/ tests/ --count --exit-zero --max-complexity=15 --max-line-length=135 --statistics
+          flake8 src/ tests/ app.py main.py --count --exit-zero --max-complexity=15 --max-line-length=135 --statistics
 
   test-suite:
     name: Automated Adversarial Test Suite

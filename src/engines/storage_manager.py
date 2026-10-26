@@ -40,8 +40,10 @@ def promote_to_published(draft_path: Path | str, target_name: Optional[str] = No
     if not src.exists() or not src.is_file():
         raise FileNotFoundError(f"Draft file not found: {src}")
 
-    dst_name = target_name or src.name
-    dst = PUBLISHED_DIR / dst_name
+    dst_name = Path(target_name or src.name).name
+    dst = (PUBLISHED_DIR / dst_name).resolve()
+    if not dst.is_relative_to(PUBLISHED_DIR.resolve()):
+        raise ValueError(f"Security: Target path '{dst}' escapes PUBLISHED_DIR '{PUBLISHED_DIR}'")
     shutil.move(str(src), str(dst))
     logger.info("Promoted %s -> %s", src.name, dst.name)
     return dst

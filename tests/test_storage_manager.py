@@ -49,6 +49,25 @@ def test_promote_to_published(tmp_path: Path, monkeypatch):
         promote_to_published(tmp_path / "missing.pdf")
 
 
+def test_promote_to_published_path_traversal(tmp_path: Path, monkeypatch):
+    """Security Regression: Verifies that target_name cannot escape PUBLISHED_DIR."""
+    test_published_dir = tmp_path / "published"
+    test_published_dir.mkdir()
+    monkeypatch.setattr("src.engines.storage_manager.PUBLISHED_DIR", test_published_dir)
+
+    draft = tmp_path / "draft.pdf"
+    draft.write_text("sensitive draft data")
+
+    # Attempting to supply a traversal payload in target_name
+    promoted = promote_to_published(draft, "../../escaped_critical.txt")
+
+    # The file must be safely confined inside test_published_dir
+    assert promoted.resolve().is_relative_to(test_published_dir.resolve())
+    assert promoted.name == "escaped_critical.txt"
+    assert not (tmp_path / "escaped_critical.txt").exists()
+
+
+
 def test_prune_expired_drafts(tmp_path: Path):
     # Old file (30 hours old)
     old_file = tmp_path / "old.pdf"
